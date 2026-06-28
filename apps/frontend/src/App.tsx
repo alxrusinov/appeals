@@ -1,122 +1,84 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { Route, Routes, Navigate } from "react-router-dom";
+import { ProtectedRoute } from "./components/ProtectedRoute";
+
+// 1. Импорт страниц строго по утвержденной архитектуре
+import { LoginPage } from "./pages/LoginPage";
+import { CitizenPage } from "./pages/CitizenPage";
+import { EmployeePage } from "./pages/EmployeePage";
+import { AdminPage } from "./pages/AdminPage";
+import { Unauthorized } from "./pages/Unauthorized";
+
+// 2. Хук авторизации для динамического получения роли
+import { useAuth } from "./features/auth/hooks/useAuth";
 
 function App() {
-  const [count, setCount] = useState(0)
+  // Получаем данные текущего юзера и статус загрузки (проверки токена) из React Query
+  const { user, isLoading } = useAuth();
+
+  // Пока бэкенд проверяет валидность токена из localStorage, крутим спиннер PrimeReact
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <i className="pi pi-spin pi-spinner text-4xl text-green-600" />
+      </div>
+    );
+  }
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <Routes>
+      {/* Публичные маршруты */}
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/unauthorized" element={<Unauthorized />} />
 
-      <div className="ticks"></div>
+      {/* Доступно только Гражданам */}
+      <Route
+        element={
+          <ProtectedRoute allowedRoles={["citizen"]} userRole={user?.role} />
+        }
+      >
+        <Route path="/cabinet" element={<CitizenPage />} />
+      </Route>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+      {/* Доступно Сотрудникам и Админам */}
+      <Route
+        element={
+          <ProtectedRoute
+            allowedRoles={["employee", "admin"]}
+            userRole={user?.role}
+          />
+        }
+      >
+        <Route path="/workspace" element={<EmployeePage />} />
+      </Route>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+      {/* Доступно ТОЛЬКО Админам */}
+      <Route
+        element={
+          <ProtectedRoute allowedRoles={["admin"]} userRole={user?.role} />
+        }
+      >
+        <Route path="/admin/dashboard" element={<AdminPage />} />
+      </Route>
+
+      {/* Умный редирект: если роут не найден, кидаем юзера на его домашний экран в зависимости от роли */}
+      <Route
+        path="*"
+        element={
+          user ? (
+            user.role === "citizen" ? (
+              <Navigate to="/cabinet" replace />
+            ) : user.role === "admin" ? (
+              <Navigate to="/admin/dashboard" replace />
+            ) : (
+              <Navigate to="/workspace" replace />
+            )
+          ) : (
+            <Navigate to="/login" replace />
+          )
+        }
+      />
+    </Routes>
+  );
 }
 
-export default App
+export default App;
