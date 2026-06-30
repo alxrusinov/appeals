@@ -11,12 +11,29 @@ import 'primereact/resources/primereact.min.css';                 // Базов�
 import 'primeicons/primeicons.css';                               // Пакет иконок
 import './index.css';                                             // Твой Tailwind
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
+// Функция безопасного включения мокирования
+async function enableMocking() {
+  // Включаем MSW только локально. На проде (production) функция сразу завершается
+  if (import.meta.env.PROD) {
+    return;
+  }
+
+  const { worker } = await import('./mocks/browser');
+
+  // start() возвращает Promise. onUnhandledRequest: 'bypass' глушит варнинги о запросах к ассетам Vite
+  return worker.start({
+    onUnhandledRequest: 'bypass',
+  });
+}
+
+enableMocking().then(() => {
+  ReactDOM.createRoot(document.getElementById('root')!).render(
+    <React.StrictMode>
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <App />
+        </BrowserRouter>
     </QueryClientProvider>
   </React.StrictMode>
 );
+})
