@@ -61,12 +61,20 @@
   font-size: 1.125rem !important;
 }
 
+.p-datatable .p-datatable-thead > tr > th,
+.p-datatable .p-datatable-tbody > tr > td,
+.p-datatable.p-datatable-sm .p-datatable-thead > tr > th,
+.p-datatable.p-datatable-sm .p-datatable-tbody > tr > td {
+  padding: 1rem 1.25rem !important; /* Принудительный комфортный отступ */
+  box-sizing: border-box;
+}
+
 /* ==========================================================================
    БЛОК 2: Системные переменные, шрифты и контейнеры
    ========================================================================== */
 :root {
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
+  --sans: system-ui, "Segoe UI", Roboto, sans-serif;
+  --heading: system-ui, "Segoe UI", Roboto, sans-serif;
   --mono: ui-monospace, Consolas, monospace;
 
   font-family: var(--sans);
@@ -90,7 +98,8 @@ body {
   box-sizing: border-box;
 }
 
-h1, h2 {
+h1,
+h2 {
   font-family: var(--heading);
   font-weight: 600;
   margin: 0;

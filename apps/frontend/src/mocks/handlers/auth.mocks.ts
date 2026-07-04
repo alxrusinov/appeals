@@ -22,8 +22,8 @@ export const authHandlers = [
 
     if (body.password === "employee") {
       sessionStorage.setItem("user_role", "employee");
-    } else if (body.password === "user") {
-      sessionStorage.setItem("user_role", "user");
+    } else if (body.password === "citizen") {
+      sessionStorage.setItem("user_role", "citizen");
     } else {
       sessionStorage.setItem("user_role", "admin");
     }
