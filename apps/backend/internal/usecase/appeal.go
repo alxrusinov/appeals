@@ -1,0 +1,117 @@
+package usecase
+
+import (
+	"context"
+	"errors"
+	"time"
+
+	"appeals/apps/backend/internal/domain"
+)
+
+type appealUsecase struct {
+	appealRepo domain.AppealRepository
+}
+
+func NewAppealUsecase(appealRepo domain.AppealRepository) domain.AppealUsecase {
+	return &appealUsecase{
+		appealRepo: appealRepo,
+	}
+}
+
+// Создание обращения гражданином из Личного Кабинета
+func (u *appealUsecase) CreateByCitizen(ctx context.Context, citizenID int, title, description string) (*domain.Appeal, error) {
+	now := time.Now()
+	// По регламенту на обработку обращения дается ровно 30 дней
+	deadline := now.AddDate(0, 0, 30)
+
+	appeal := &domain.Appeal{
+		Title:        title,
+		Description:  description,
+		Status:       domain.StatusInWork, // Дефолтный статус
+		CitizenID:    citizenID,
+		AssigneeID:   nil, // Исполнитель изначально пуст
+		DepartmentID: nil, // Отдел изначально пуст
+		CreatedAt:    now,
+		DeadlineAt:   deadline,
+	}
+
+	if err := u.appealRepo.Create(ctx, appeal); err != nil {
+		return nil, err
+	}
+
+	return appeal, nil
+}
+
+// Создание обращения сотрудником (например, по звонку или на личном приеме)
+func (u *appealUsecase) CreateByEmployee(ctx context.Context, title, description string, citizenID, assigneeID int, deadlineAt time.Time) (*domain.Appeal, error) {
+	appeal := &domain.Appeal{
+		Title:       title,
+		Description: description,
+		Status:      domain.StatusInWork,
+		CitizenID:   citizenID,
+		AssigneeID:  &assigneeID,
+		CreatedAt:   time.Now(),
+		DeadlineAt:  deadlineAt,
+	}
+
+	if err := u.appealRepo.Create(ctx, appeal); err != nil {
+		return nil, err
+	}
+
+	return appeal, nil
+}
+
+// Получение списка обращений для панели мониторинга сотрудников
+func (u *appealUsecase) GetListForEmployee(ctx context.Context, filter domain.AppealFilter) ([]domain.Appeal, error) {
+	appeals, err := u.appealRepo.Fetch(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+
+	// 🎓 Изюминка диплома: Пересчитываем статус на лету перед передачей в контроллер
+	for i := range appeals {
+		appeals[i].ComputeDynamicStatus()
+	}
+
+	return appeals, nil
+}
+
+// Получение изолированного списка обращений гражданина
+func (u *appealUsecase) GetListForCitizen(ctx context.Context, citizenID int) ([]domain.Appeal, error) {
+	appeals, err := u.appealRepo.FetchByCitizenID(ctx, citizenID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Пересчитываем статусы для ЛК
+	for i := range appeals {
+		appeals[i].ComputeDynamicStatus()
+	}
+
+	return appeals, nil
+}
+
+// Изменение статуса, назначение ответственного или закрытие обращения
+func (u *appealUsecase) UpdateStatus(ctx context.Context, id int, status domain.AppealStatus, assigneeID *int, resolution string) error {
+	appeal, err := u.appealRepo.GetByID(ctx, id)
+	if err != nil {
+		return errors.New("обращение не найдено")
+	}
+
+	if assigneeID != nil {
+		appeal.AssigneeID = assigneeID
+	}
+
+	appeal.Status = status
+
+	// Если статус меняется на "done" (Решено) — фиксируем время выполнения и текст ответа
+	if status == domain.StatusDone {
+		now := time.Now()
+		appeal.ExecutedAt = &now
+		if resolution != "" {
+			appeal.Resolution = &resolution
+		}
+	}
+
+	return u.appealRepo.Update(ctx, appeal)
+}
