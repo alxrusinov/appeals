@@ -65,10 +65,17 @@ export const CitizenPage = () => {
         <Button
           icon="pi pi-eye"
           label="Просмотр"
-          className="p-button-text p-button-sm text-green-600 hover:bg-green-50 px-3 py-1.5 rounded-lg font-medium gap-2"
           onClick={() => {
             setSelectedAppeal(rowData);
             setDetailVisible(true);
+          }}
+          pt={{
+            root: {
+              className: `
+                p-button-text p-button-sm text-green-600 hover:bg-green-50
+                px-3 py-1.5 rounded-lg font-medium gap-2 transition-colors
+            `,
+            },
           }}
         />
       </div>
@@ -97,9 +104,16 @@ export const CitizenPage = () => {
         <Button
           label="Подать новое обращение"
           icon="pi pi-plus"
-          severity="success"
-          className="p-button-raised font-semibold shadow-md px-5 py-3 rounded-xl gap-2 transition-all"
           onClick={() => setModalVisible(true)}
+          pt={{
+            root: {
+              className: `
+                    flex items-center gap-2
+                    px-5 py-2.5 rounded-xl font-medium shadow-xs
+                    bg-green-500 hover:bg-green-600 border-green-500 text-white transition-colors duration-200
+                    `,
+            },
+          }}
         />
       </div>
 
@@ -287,7 +301,15 @@ export const CitizenPage = () => {
           <Button
             label="Закрыть"
             onClick={() => setDetailVisible(false)}
-            className="px-4 py-2 bg-white border border-gray-300 rounded-xl text-gray-700 font-medium hover:bg-gray-50 text-sm shadow-xs"
+            pt={{
+              root: {
+                className: `
+                    px-4 py-2.5 rounded-xl font-medium
+                    bg-gray-500 hover:bg-gray-600 border-gray-500 text-white
+                    transition-colors duration-200
+                    `,
+              },
+            }}
           />
         </div>
       </Dialog>

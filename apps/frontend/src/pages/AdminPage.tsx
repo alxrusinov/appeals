@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { TabView, TabPanel } from "primereact/tabview";
 import { DataTable } from "primereact/datatable";
@@ -15,13 +15,13 @@ export const AdminPage = () => {
   const queryClient = useQueryClient();
   const [userDialog, setUserDialog] = useState(false);
   const [selectedUser, setSelectedUser] = useState<any>(null);
-  const [isDownloading, setIsDownloading] = useState(false);
   const [formErrors, setFormErrors] = useState<{
     name?: string;
     email?: string;
   }>({});
+  const [isDownloading, setIsDownloading] = useState(false);
 
-  const { data: stats = [] } = useQuery({
+  const { data: rawStats = [] } = useQuery({
     queryKey: ["adminStats"],
     queryFn: async () => {
       const { data } = await api.get("/admin/stats");
@@ -29,13 +29,19 @@ export const AdminPage = () => {
     },
   });
 
-  const { data: users = [], isLoading: usersLoading } = useQuery({
+  const { data: rawUsers = [], isLoading: usersLoading } = useQuery({
     queryKey: ["adminUsers"],
     queryFn: async () => {
       const { data } = await api.get("/admin/users");
       return data;
     },
   });
+
+  const users = useMemo(() => {
+    return rawUsers.filter(
+      (user: any) => user.role === "admin" || user.role === "employee",
+    );
+  }, [rawUsers]);
 
   const updateUserMutation = useMutation({
     mutationFn: async (user: any) => {
@@ -83,28 +89,82 @@ export const AdminPage = () => {
     }
   };
 
-  const handleDownloadReport = async () => {
+  const handleDownloadReport = () => {
+    if (!users || users.length === 0) {
+      console.warn("Нет данных для скачивания");
+      return;
+    }
+
     setIsDownloading(true);
     try {
-      const response = await api.get("/admin/report", { responseType: "blob" });
-      const blob = new Blob([response.data], {
+      // 1. Формируем заголовки
+      const header = "ID;ФИО сотрудника;Email;Роль в системе;Статус\n";
+
+      // 2. Формируем тело, экранируя кавычки (на случай, если в данных есть запятые или точки с запятой)
+      const body = users
+        .map((u: any) =>
+          [u.id, u.name, u.email, u.role, u.status]
+            .map(value => `"${String(value ?? "").replace(/"/g, '""')}"`)
+            .join(";"),
+        )
+        .join("\n");
+
+      const csvContent = header + body;
+
+      // 3. Создаем Blob с BOM для корректного отображения кириллицы в Excel
+      const blob = new Blob(["\uFEFF" + csvContent], {
         type: "text/csv;charset=utf-8;",
       });
+
+      // 4. Логика скачивания
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
+
       const date = new Date().toISOString().split("T")[0];
-      link.setAttribute("download", `report_users_${date}.csv`);
+      link.setAttribute("download", `employees_report_${date}.csv`);
+
       document.body.appendChild(link);
       link.click();
+
+      // Очистка
       link.remove();
       window.URL.revokeObjectURL(url);
     } catch (error) {
-      console.error("Не удалось скачать отчет:", error);
+      console.error("Не удалось сгенерировать CSV отчет:", error);
+      // Здесь можно добавить уведомление для пользователя, например: toast.error("Ошибка при скачивании");
     } finally {
+      // Блок finally сработает всегда, даже если возникла ошибка
       setIsDownloading(false);
     }
   };
+
+  const stats = useMemo(() => {
+    return [
+      {
+        title: "Всего обращений",
+        count: rawStats ? rawStats.total_count : 0,
+        icon: "pi-ticket",
+        color: "bg-blue-500",
+        text: "text-blue-500",
+      },
+      {
+        title: "В работе",
+        count: rawStats.by_status?.in_work ? rawStats.by_status.in_work : 0,
+        icon: "pi-spin pi-spinner",
+        color: "bg-amber-500",
+        text: "text-amber-500",
+      },
+      {
+        title: "Активные операторы",
+        count: users.filter((u: { role: string }) => u.role === "employee")
+          .length,
+        icon: "pi-users",
+        color: "bg-green-500",
+        text: "text-green-500",
+      },
+    ];
+  }, [rawStats, users]);
 
   // 🎯 ИСПРАВЛЕНО: Заменили <Tag> на чистый <span> с гарантированной поддержкой паддингов Tailwind
   const statusBodyTemplate = (rowData: any) => {
@@ -144,10 +204,17 @@ export const AdminPage = () => {
       <div className="flex gap-2 justify-end">
         <Button
           icon="pi pi-pencil"
-          className="p-button-text p-button-sm text-blue-600 hover:bg-blue-50"
           onClick={() => {
             setSelectedUser({ ...rowData });
             setUserDialog(true);
+          }}
+          pt={{
+            root: {
+              className: `
+                p-button-text p-button-sm text-blue-600 hover:bg-blue-50
+                rounded-lg transition-colors
+            `,
+            },
           }}
         />
       </div>
@@ -170,10 +237,17 @@ export const AdminPage = () => {
         <Button
           label="Скачать отчет"
           icon="pi pi-download mr-2"
-          severity="secondary"
           loading={isDownloading}
           onClick={handleDownloadReport}
-          className="shadow-xs bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+          pt={{
+            root: {
+              className: `
+                    px-4 py-2.5 rounded-xl font-medium
+                    bg-gray-500 hover:bg-gray-600 border-gray-500 text-white
+                    transition-colors duration-200
+                    `,
+            },
+          }}
         />
       </div>
 
@@ -218,15 +292,22 @@ export const AdminPage = () => {
                 <Button
                   label="Добавить сотрудника"
                   icon="pi pi-user-plus mr-2"
-                  severity="success"
                   onClick={() => {
                     setSelectedUser({
                       name: "",
                       email: "",
-                      role: "Оператор",
+                      role: "employee",
                       status: "Активен",
                     });
                     setUserDialog(true);
+                  }}
+                  pt={{
+                    root: {
+                      className: `
+                        px-5 py-2.5 rounded-xl font-medium shadow-xs
+                        bg-green-500 hover:bg-green-600 border-green-500 text-white transition-colors duration-200
+                        `,
+                    },
                   }}
                 />
               </div>
@@ -280,8 +361,15 @@ export const AdminPage = () => {
               </p>
               <Button
                 label="Настроить правила"
-                severity="help"
-                className="mt-2"
+                pt={{
+                  root: {
+                    className: `
+                        mt-2 px-4 py-2 rounded-xl font-medium
+                        bg-purple-500 hover:bg-purple-600 border-purple-500 text-white
+                        transition-colors
+                    `,
+                  },
+                }}
               />
             </div>
           </TabPanel>
@@ -310,17 +398,29 @@ export const AdminPage = () => {
           <>
             <Button
               label="Отмена"
-              severity="secondary"
-              text
               onClick={closeDialog}
-              className="hover:bg-gray-200/50 text-gray-600 font-medium rounded-xl px-4 py-2.5"
+              pt={{
+                root: {
+                  className: `
+                    px-4 py-2.5 rounded-xl font-medium
+                    bg-gray-500 hover:bg-gray-600 border-gray-500 text-white
+                    transition-colors duration-200
+                    `,
+                },
+              }}
             />
             <Button
               label={selectedUser?.id ? "Сохранить" : "Создать"}
-              severity="success"
               loading={updateUserMutation.isPending}
               onClick={handleSaveUser}
-              className="px-5 py-2.5 rounded-xl font-medium shadow-xs"
+              pt={{
+                root: {
+                  className: `
+                    px-5 py-2.5 rounded-xl font-medium shadow-xs
+                    bg-green-500 hover:bg-green-600 border-green-500 text-white transition-colors duration-200
+                    `,
+                },
+              }}
             />
           </>
         }
@@ -387,7 +487,10 @@ export const AdminPage = () => {
               </label>
               <Dropdown
                 value={selectedUser.role}
-                options={["Администратор", "Оператор", "Исполнитель"]}
+                options={[
+                  { label: "Администратор", value: "admin" },
+                  { label: "Исполнитель", value: "employee" },
+                ]}
                 onChange={e =>
                   setSelectedUser({ ...selectedUser, role: e.value })
                 }

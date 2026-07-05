@@ -47,18 +47,18 @@
 
 /* Базовые стили для кнопок */
 .p-button {
-  padding: 0.75rem 1.25rem !important;
-  font-size: 1rem !important;
-  line-height: 1.5 !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
+  padding: 0.75rem 1.25rem;
+  font-size: 1rem;
+  line-height: 1.5;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* Увеличенные кнопки (модификатор -lg) */
 .p-button-lg {
-  padding: 0.875rem 1.5rem !important;
-  font-size: 1.125rem !important;
+  padding: 0.875rem 1.5rem;
+  font-size: 1.125rem;
 }
 
 .p-datatable .p-datatable-thead > tr > th,

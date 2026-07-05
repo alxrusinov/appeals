@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"appeals/apps/backend/internal/config"
-	"appeals/apps/backend/internal/domain"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/kataras/iris/v12"
@@ -14,6 +13,11 @@ import (
 // AuthMiddleware проверяет валидность JWT-токена
 func AuthMiddleware(cfg *config.Config) iris.Handler {
 	return func(ctx iris.Context) {
+		if ctx.Method() == "OPTIONS" {
+			ctx.Next()
+			return
+		}
+
 		var tokenStr string
 
 		// 1. Пытаемся взять токен из заголовка Authorization
@@ -61,18 +65,6 @@ func AuthMiddleware(cfg *config.Config) iris.Handler {
 		ctx.Values().Set("user_id", int(claims["sub"].(float64)))
 		ctx.Values().Set("user_role", claims["role"].(string))
 
-		ctx.Next()
-	}
-}
-
-// RoleMiddleware ограничивает доступ к эндпоинту на основе роли
-func RoleMiddleware(allowedRole domain.UserRole) iris.Handler {
-	return func(ctx iris.Context) {
-		role := ctx.Values().GetString("user_role")
-		if role != string(allowedRole) {
-			ctx.StopWithJSON(iris.StatusForbidden, iris.Map{"error": "доступ запрещен для вашей роли"})
-			return
-		}
 		ctx.Next()
 	}
 }

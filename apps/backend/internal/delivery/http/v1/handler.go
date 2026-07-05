@@ -12,6 +12,7 @@ type Handler struct {
 	authUC   domain.AuthUsecase
 	appealUC domain.AppealUsecase
 	statsUC  domain.StatsUsecase
+	adminUC  domain.AdminUsecase
 	userRepo domain.UserRepository
 	deptRepo domain.DepartmentRepository
 	cfg      *config.Config
@@ -21,6 +22,7 @@ func NewHandler(
 	authUC domain.AuthUsecase,
 	appealUC domain.AppealUsecase,
 	statsUC domain.StatsUsecase,
+	adminUC domain.AdminUsecase,
 	userRepo domain.UserRepository,
 	deptRepo domain.DepartmentRepository,
 	cfg *config.Config,
@@ -29,6 +31,7 @@ func NewHandler(
 		authUC:   authUC,
 		appealUC: appealUC,
 		statsUC:  statsUC,
+		adminUC:  adminUC,
 		userRepo: userRepo,
 		deptRepo: deptRepo,
 		cfg:      cfg,
@@ -52,6 +55,20 @@ func (h *Handler) InitRoutes(api iris.Party) {
 	protected := v1.Party("/")
 	protected.Use(middleware.AuthMiddleware(h.cfg))
 
+	// Модуль АДМИНИСТРАТОРА
+	admin := protected.Party("/admin")
+	// Предполагаем, что у вас есть RoleAdmin в domain.Role
+	admin.Use(middleware.RoleMiddleware(domain.RoleAdmin))
+	{
+		// Пользователи
+		admin.Get("/users", h.getUsers)
+		admin.Post("/users", h.createUser)
+		admin.Put("/users/{id:int}", h.updateUser)
+
+		// Статистика (которую вы вызывали в коде как /admin/stats)
+		admin.Get("/stats", h.getStatsSummary)
+	}
+
 	// Эндпоинты ГРАЖДАН (Личный кабинет)
 	citizenAppeals := protected.Party("/citizen/appeals")
 	citizenAppeals.Use(middleware.RoleMiddleware(domain.RoleCitizen))
@@ -62,7 +79,7 @@ func (h *Handler) InitRoutes(api iris.Party) {
 
 	// Эндпоинты СОТРbackgroundУДНИКОВ (Панель мониторинга)
 	employeeAppeals := protected.Party("/appeals")
-	employeeAppeals.Use(middleware.RoleMiddleware(domain.RoleEmployee))
+	employeeAppeals.Use(middleware.RoleMiddleware(domain.RoleEmployee, domain.RoleAdmin))
 	{
 		employeeAppeals.Get("/", h.getEmployeeAppeals)
 		employeeAppeals.Post("/", h.createEmployeeAppeal)
@@ -71,7 +88,7 @@ func (h *Handler) InitRoutes(api iris.Party) {
 
 	// Модуль статистики (Только сотрудники/админы)
 	stats := protected.Party("/stats")
-	stats.Use(middleware.RoleMiddleware(domain.RoleEmployee))
+	employeeAppeals.Use(middleware.RoleMiddleware(domain.RoleEmployee, domain.RoleAdmin))
 	{
 		stats.Get("/summary", h.getStatsSummary)
 		stats.Get("/realtime", h.getStatsRealtime)

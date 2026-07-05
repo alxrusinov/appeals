@@ -11,8 +11,8 @@ import { InputText } from "primereact/inputtext";
 import { InputTextarea } from "primereact/inputtextarea";
 
 import { api } from "../services/api";
-import {getAppealStatusDisplay} from "../utils/appealStatus";
-import {formatDate} from "../utils/date";
+import { getAppealStatusDisplay } from "../utils/appealStatus";
+import { formatDate } from "../utils/date";
 
 export const EmployeePage = () => {
   const queryClient = useQueryClient();
@@ -33,7 +33,7 @@ export const EmployeePage = () => {
     queryFn: async () => {
       const { data } = await api.get("/appeals");
       return data;
-    }
+    },
   });
 
   const { data: rawStats } = useQuery({
@@ -41,16 +41,14 @@ export const EmployeePage = () => {
     queryFn: async () => {
       const { data } = await api.get("/stats/summary");
       return data;
-    }});
+    },
+  });
 
   // Мутация: ветвление на POST (создание) и PUT (редактирование)
   const saveTicketMutation = useMutation({
     mutationFn: async (ticket: any) => {
       if (ticket.id) {
-        const { data } = await api.patch(
-          `/appeals/${ticket.id}`,
-          ticket,
-        );
+        const { data } = await api.patch(`/appeals/${ticket.id}`, ticket);
         return data;
       } else {
         const { data } = await api.post("/appeals", ticket);
@@ -104,49 +102,58 @@ export const EmployeePage = () => {
 
   // Скачивание отчета
   const handleDownloadReport = () => {
-  if (!tickets || tickets.length === 0) {
-    console.warn("Нет данных для скачивания");
-    return;
-  }
+    if (!tickets || tickets.length === 0) {
+      console.warn("Нет данных для скачивания");
+      return;
+    }
 
-  setIsDownloading(true);
-  try {
-    // 1. Формируем тело CSV
-    const header = "ID;Title;AssingneeName;AuthorName;Status;CreatedAt\n";
-    const body = tickets
-      .map(
-        (t: {id: any; title: any; assignee_name: any; author_name: any; status: any; created_at: any;}) =>
-          `${t.id};${t.title || ""};${t.assignee_name || ""};${t.author_name || ""};${t.status || ""};${t.created_at || ""}`
-      )
-      .join("\n");
+    setIsDownloading(true);
+    try {
+      // 1. Формируем тело CSV
+      const header =
+        "ID;Заголовок;ФИО сотрудника;ФИО Гражданина;Статус;Дата создания\n";
 
-    const csvContent = header + body;
+      const body = tickets
+        .map(
+          (t: {
+            id: any;
+            title: any;
+            assignee_name: any;
+            author_name: any;
+            status: any;
+            created_at: any;
+          }) =>
+            `${t.id};${t.title || ""};${t.assignee_name || ""};${t.author_name || ""};${t.status || ""};${t.created_at || ""}`,
+        )
+        .join("\n");
 
-    // 2. Создаем Blob с BOM для корректного отображения кириллицы в Excel
-    const blob = new Blob(["\uFEFF" + csvContent], {
-      type: "text/csv;charset=utf-8;",
-    });
+      const csvContent = header + body;
 
-    // 3. Создаем временную ссылку для скачивания
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
+      // 2. Создаем Blob с BOM для корректного отображения кириллицы в Excel
+      const blob = new Blob(["\uFEFF" + csvContent], {
+        type: "text/csv;charset=utf-8;",
+      });
 
-    const date = new Date().toISOString().split("T")[0];
-    link.setAttribute("download", `my_tasks_${date}.csv`);
+      // 3. Создаем временную ссылку для скачивания
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
 
-    document.body.appendChild(link);
-    link.click();
+      const date = new Date().toISOString().split("T")[0];
+      link.setAttribute("download", `my_tasks_${date}.csv`);
 
-    // Очистка
-    link.remove();
-    window.URL.revokeObjectURL(url);
-  } catch (error) {
-    console.error("Не удалось сгенерировать CSV отчет:", error);
-  } finally {
-    setIsDownloading(false);
-  }
-};
+      document.body.appendChild(link);
+      link.click();
+
+      // Очистка
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Не удалось сгенерировать CSV отчет:", error);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   const stats = useMemo(() => {
     return [
@@ -171,13 +178,14 @@ export const EmployeePage = () => {
         color: "bg-emerald-500",
         text: "text-emerald-500",
       },
-    ]
+    ];
   }, [rawStats]);
 
-
-
   const statusBodyTemplate = (rowData: any) => {
-    const {label, colorClass} = getAppealStatusDisplay(rowData.status, rowData.assigneeId);
+    const { label, colorClass } = getAppealStatusDisplay(
+      rowData.status,
+      rowData.assigneeId,
+    );
 
     return (
       <span
@@ -187,7 +195,6 @@ export const EmployeePage = () => {
       </span>
     );
   };
-
 
   const actionsBodyTemplate = (rowData: any) => {
     return (
@@ -221,10 +228,17 @@ export const EmployeePage = () => {
         <Button
           label="Скачать отчет"
           icon="pi pi-download mr-2"
-          severity="secondary"
           loading={isDownloading}
           onClick={handleDownloadReport}
-          className="shadow-xs bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+          pt={{
+            root: {
+              className: `
+                    px-4 py-2.5 rounded-xl font-medium
+                    bg-gray-500 hover:bg-gray-600 border-gray-500 text-white
+                    transition-colors duration-200
+                    `,
+            },
+          }}
         />
       </div>
 
@@ -267,7 +281,6 @@ export const EmployeePage = () => {
                 <Button
                   label="Создать обращение"
                   icon="pi pi-plus-circle mr-2"
-                  severity="success"
                   onClick={() => {
                     setSelectedTicket({
                       title: "",
@@ -277,6 +290,18 @@ export const EmployeePage = () => {
                       resolution: "",
                     });
                     setTicketDialog(true);
+                  }}
+                  pt={{
+                    root: opt => ({
+                      className: `
+                        px-5 py-2.5 rounded-xl font-medium shadow-xs transition-colors duration-200
+                        ${
+                          opt?.props?.disabled
+                            ? "bg-gray-300 border-gray-300 text-gray-500 cursor-not-allowed opacity-60" // Стили для disabled
+                            : "bg-green-500 border-green-500 text-white hover:bg-green-600" // Активные стили
+                        }
+                      `,
+                    }),
                   }}
                   disabled
                 />
@@ -340,17 +365,31 @@ export const EmployeePage = () => {
           <>
             <Button
               label="Отмена"
-              severity="secondary"
-              text
+              type="button"
               onClick={closeDialog}
-              className="hover:bg-gray-200/50 text-gray-600 font-medium rounded-xl px-4 py-2.5"
+              pt={{
+                root: {
+                  className: `
+                    px-4 py-2.5 rounded-xl font-medium
+                    bg-gray-500 hover:bg-gray-600 border-gray-500 text-white
+                    transition-colors duration-200
+                    `,
+                },
+              }}
             />
             <Button
               label={selectedTicket?.id ? "Сохранить" : "Создать"}
               severity="success"
               loading={saveTicketMutation.isPending}
               onClick={handleSaveTicket}
-              className="px-5 py-2.5 rounded-xl font-medium shadow-xs"
+              pt={{
+                root: {
+                  className: `
+                    px-5 py-2.5 rounded-xl font-medium shadow-xs
+                    bg-green-500 hover:bg-green-600 border-green-500 text-white transition-colors duration-200
+                    `,
+                },
+              }}
             />
           </>
         }
@@ -443,7 +482,11 @@ export const EmployeePage = () => {
                     </label>
                     <Dropdown
                       value={selectedTicket.status}
-                      options={[{label: "В работе",value: "in_work"}, {label: "Решено", value: "done"}, {label: "Просрочено", value: "overdue"}]}
+                      options={[
+                        { label: "В работе", value: "in_work" },
+                        { label: "Решено", value: "done" },
+                        { label: "Просрочено", value: "overdue" },
+                      ]}
                       onChange={e => {
                         setSelectedTicket({
                           ...selectedTicket,

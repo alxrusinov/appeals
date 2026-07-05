@@ -82,9 +82,15 @@ export const LoginForm = () => {
         type="submit"
         label={isLoggingIn ? "Вход в систему..." : "Войти"}
         icon={isLoggingIn ? "pi pi-spin pi-spinner" : "pi pi-sign-in"}
-        severity="success"
         loading={isLoggingIn}
-        className="w-full p-button-lg mt-2 font-bold shadow-md"
+        pt={{
+          root: {
+            className: `
+                    px-5 py-2.5 rounded-xl font-medium shadow-xs
+                    bg-green-500 hover:bg-green-600 border-green-500 text-white transition-colors duration-200
+                    `,
+          },
+        }}
       />
     </form>
   );

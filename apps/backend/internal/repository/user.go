@@ -74,3 +74,74 @@ func (r *userRepository) GetEmployees(ctx context.Context) ([]domain.EmployeeRec
 	}
 	return employees, nil
 }
+
+func (r *userRepository) FetchUsers(ctx context.Context) ([]domain.User, error) {
+	// Исключаем password_hash из выборки ради безопасности
+	query := `SELECT id, full_name, email, role, status, created_at FROM users ORDER BY id DESC`
+	var users []domain.User
+
+	err := r.db.SelectContext(ctx, &users, query)
+	if err != nil {
+		return nil, err
+	}
+	return users, nil
+}
+
+func (r *userRepository) Update(ctx context.Context, user *domain.User) error {
+	query := `
+		UPDATE users
+		SET full_name = ?, email = ?, role = ?, status = ?
+		WHERE id = ?
+	`
+	_, err := r.db.ExecContext(ctx, query, user.FullName, user.Email, user.Role, user.Status, user.ID)
+	return err
+}
+
+func (r *userRepository) GetStatsSummary(ctx context.Context) ([]domain.StatRecord, error) {
+	var totalAppeals, inWorkAppeals, doneAppeals int
+
+	// 1. Считаем общее количество заявок
+	err := r.db.GetContext(ctx, &totalAppeals, "SELECT COUNT(*) FROM appeals")
+	if err != nil {
+		return nil, err
+	}
+
+	// 2. Считаем заявки в работе
+	err = r.db.GetContext(ctx, &inWorkAppeals, "SELECT COUNT(*) FROM appeals WHERE status = 'in_work'")
+	if err != nil {
+		return nil, err
+	}
+
+	// 3. Считаем выполненные заявки
+	err = r.db.GetContext(ctx, &doneAppeals, "SELECT COUNT(*) FROM appeals WHERE status = 'done'")
+	if err != nil {
+		return nil, err
+	}
+
+	// Формируем срез структур в строгом соответствии с ожиданиями фронтенда (стили Tailwind + иконки PrimeIcons)
+	stats := []domain.StatRecord{
+		{
+			Title: "Всего обращений",
+			Count: totalAppeals,
+			Color: "bg-blue-500",
+			Text:  "text-blue-500",
+			Icon:  "pi-inbox",
+		},
+		{
+			Title: "В работе",
+			Count: inWorkAppeals,
+			Color: "bg-amber-500",
+			Text:  "text-amber-500",
+			Icon:  "pi-clock",
+		},
+		{
+			Title: "Решено",
+			Count: doneAppeals,
+			Color: "bg-emerald-500",
+			Text:  "text-emerald-500",
+			Icon:  "pi-check-circle",
+		},
+	}
+
+	return stats, nil
+}

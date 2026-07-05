@@ -12,9 +12,9 @@ import { UnauthorizedPage } from "./pages/UnauthorizedPage";
 // 2. Хук авторизации для динамического получения роли
 import { useAuth } from "./features/auth/hooks/useAuth";
 
-import "primereact/resources/themes/lara-light-green/theme.css"; // или ваша тема
-import "primereact/resources/primereact.min.css";
-import "primeicons/primeicons.css";
+import "primereact/resources/themes/lara-light-green/theme.css"; // 1. ТЕМА
+import "primereact/resources/primereact.min.css"; // 2. БАЗА
+import "primeicons/primeicons.css"; // 3. ИКОНКИ
 import "./index.css";
 
 function App() {

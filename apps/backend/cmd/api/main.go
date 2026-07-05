@@ -79,9 +79,10 @@ func main() {
 	authUC := usecase.NewAuthUsecase(userRepo, cfg)
 	appealUC := usecase.NewAppealUsecase(appealRepo)
 	statsUC := usecase.NewStatsUsecase(appealRepo)
+	adminUC := usecase.NewAdminUsecase(userRepo)
 
 	// Шаг 5.3: Создаем главный Хэндлер и связываем все маршруты
-	handler := v1.NewHandler(authUC, appealUC, statsUC, userRepo, deptRepo, cfg)
+	handler := v1.NewHandler(authUC, appealUC, statsUC, adminUC, userRepo, deptRepo, cfg)
 
 	// Передаем APIContainer от нашего приложения в метод InitRoutes,
 	// который автоматически развернет дерево путей (/api/v1/auth, /api/v1/appeals и т.д.)
