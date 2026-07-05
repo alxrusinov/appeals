@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"log"
 	"strings"
 
 	"appeals/apps/backend/internal/config"
@@ -39,8 +40,14 @@ func AuthMiddleware(cfg *config.Config) iris.Handler {
 			return []byte(cfg.JWT.Secret), nil
 		})
 
-		if err != nil || !token.Valid {
+		if err != nil {
+			log.Printf("[DEBUG] JWT Parse Error: %v", err)
 			ctx.StopWithJSON(iris.StatusUnauthorized, iris.Map{"error": "невалидный или просроченный токен"})
+			return
+		}
+
+		if !token.Valid {
+			ctx.StopWithJSON(iris.StatusUnauthorized, iris.Map{"error": "токен невалиден"})
 			return
 		}
 

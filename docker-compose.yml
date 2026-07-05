@@ -1,0 +1,82 @@
+services:
+  # ==========================================
+  # 1. СУБД MySQL
+  # ==========================================
+  db:
+    image: mysql:8.4
+    container_name: appeals_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root_secure_pass_2026
+      MYSQL_DATABASE: appeals_db
+      MYSQL_USER: db_user
+      MYSQL_PASSWORD: db_password_123
+    ports:
+      - "3306:3306" # Пробрасываем наружу для удобной отладки через DBeaver/DataGrip
+    volumes:
+      - mysql_data:/var/lib/mysql
+    # Проверка готовности СУБД принимать соединения
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot_secure_pass_2026"]
+      timeout: 5s
+      retries: 10
+      interval: 5s
+      start_period: 30s
+
+# ==========================================
+  # 2. migrate (для применения миграций к базе)
+  # ==========================================
+  migrate:
+    image: migrate/migrate
+    volumes:
+      - ./migrations:/migrations
+    # Ждем, пока база станет здоровой (healthcheck)
+    depends_on:
+      db:
+        condition: service_healthy
+    # Команда: путь к файлам / URL базы / команда up
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >
+        sleep 5 && migrate -path=/migrations/ -database='mysql://db_user:db_password_123@tcp(db:3306)/appeals_db?charset=utf8mb4' up
+
+  # ==========================================
+  # 3. Бэкенд (Go + Iris)
+  # ==========================================
+  backend:
+    build:
+      context: ./apps/backend
+      dockerfile: Dockerfile
+    container_name: appeals_backend
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      - APP_ENV=production
+      - DB_HOST=db        # Имя сервиса в docker-compose выступает в роли хоста
+      - DB_PORT=3306
+      - DB_USER=db_user
+      - DB_PASSWORD=db_password_123
+      - DB_NAME=appeals_db
+      - JWT_SECRET=super_secret_jwt_key_for_diploma_2026
+    depends_on:
+      db:
+        condition: service_healthy # Бэкенд начнет собираться/запускаться ТОЛЬКО после успешного healthcheck-а базы
+
+  # ==========================================
+  # 4. Фронтенд (React + Nginx)
+  # ==========================================
+  frontend:
+    build:
+      context: ./apps/frontend
+      dockerfile: Dockerfile
+    container_name: appeals_frontend
+    restart: always
+    ports:
+      - "80:80" # Открываем стандартный веб-порт на хост-машине
+    depends_on:
+      - backend
+
+# Именованный volume для персистентного хранения данных БД (чтобы данные не пропадали при перезапуске)
+volumes:
+  mysql_data:

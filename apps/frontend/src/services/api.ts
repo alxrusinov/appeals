@@ -18,7 +18,7 @@ api.interceptors.request.use(
         const token = localStorage.getItem('token');
 
         // Если токен найден и заголовки существуют, инжектим Bearer-токен
-        if (token && config.headers) {
+       if (token && token !== 'undefined' && token !== 'null') {
             config.headers.Authorization = `Bearer ${token}`;
         }
 

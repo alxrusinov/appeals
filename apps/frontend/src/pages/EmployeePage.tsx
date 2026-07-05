@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { TabView, TabPanel } from "primereact/tabview";
 import { DataTable } from "primereact/datatable";
@@ -11,6 +11,8 @@ import { InputText } from "primereact/inputtext";
 import { InputTextarea } from "primereact/inputtextarea";
 
 import { api } from "../services/api";
+import {getAppealStatusDisplay} from "../utils/appealStatus";
+import {formatDate} from "../utils/date";
 
 export const EmployeePage = () => {
   const queryClient = useQueryClient();
@@ -25,35 +27,33 @@ export const EmployeePage = () => {
     resolution?: string;
   }>({});
 
-  // Получение статистики через Axios инстанс
-  const { data: stats = [] } = useQuery({
-    queryKey: ["employeeStats"],
-    queryFn: async () => {
-      const { data } = await api.get("/api/employee/stats");
-      return data;
-    },
-  });
-
   // Получение списка задач
   const { data: tickets = [], isLoading: ticketsLoading } = useQuery({
     queryKey: ["employeeTickets"],
     queryFn: async () => {
-      const { data } = await api.get("/employee/tickets");
+      const { data } = await api.get("/appeals");
       return data;
-    },
+    }
   });
+
+  const { data: rawStats } = useQuery({
+    queryKey: ["employeeStats"],
+    queryFn: async () => {
+      const { data } = await api.get("/stats/summary");
+      return data;
+    }});
 
   // Мутация: ветвление на POST (создание) и PUT (редактирование)
   const saveTicketMutation = useMutation({
     mutationFn: async (ticket: any) => {
       if (ticket.id) {
-        const { data } = await api.put(
-          `/employee/tickets/${ticket.id}`,
+        const { data } = await api.patch(
+          `/appeals/${ticket.id}`,
           ticket,
         );
         return data;
       } else {
-        const { data } = await api.post("/employee/tickets", ticket);
+        const { data } = await api.post("/appeals", ticket);
         return data;
       }
     },
@@ -85,7 +85,7 @@ export const EmployeePage = () => {
     } else {
       // Валидация закрытия существующей задачи
       if (
-        selectedTicket.status === "Решено" &&
+        selectedTicket.status === "done" &&
         !selectedTicket.resolution?.trim()
       ) {
         errors.resolution = "Необходимо указать решение для закрытия обращения";
@@ -102,65 +102,92 @@ export const EmployeePage = () => {
     }
   };
 
-  // Скачивание CSV отчета, сгенерированного воркером MSW
-  const handleDownloadReport = async () => {
-    setIsDownloading(true);
-    try {
-      const response = await api.get("/employee/report", {
-        responseType: "blob",
-      });
-      const blob = new Blob([response.data], {
-        type: "text/csv;charset=utf-8;",
-      });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      const date = new Date().toISOString().split("T")[0];
-      link.setAttribute("download", `my_tasks_${date}.csv`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error("Не удалось скачать отчет по задачам:", error);
-    } finally {
-      setIsDownloading(false);
-    }
-  };
+  // Скачивание отчета
+  const handleDownloadReport = () => {
+  if (!tickets || tickets.length === 0) {
+    console.warn("Нет данных для скачивания");
+    return;
+  }
+
+  setIsDownloading(true);
+  try {
+    // 1. Формируем тело CSV
+    const header = "ID;Title;AssingneeName;AuthorName;Status;CreatedAt\n";
+    const body = tickets
+      .map(
+        (t: {id: any; title: any; assignee_name: any; author_name: any; status: any; created_at: any;}) =>
+          `${t.id};${t.title || ""};${t.assignee_name || ""};${t.author_name || ""};${t.status || ""};${t.created_at || ""}`
+      )
+      .join("\n");
+
+    const csvContent = header + body;
+
+    // 2. Создаем Blob с BOM для корректного отображения кириллицы в Excel
+    const blob = new Blob(["\uFEFF" + csvContent], {
+      type: "text/csv;charset=utf-8;",
+    });
+
+    // 3. Создаем временную ссылку для скачивания
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+
+    const date = new Date().toISOString().split("T")[0];
+    link.setAttribute("download", `my_tasks_${date}.csv`);
+
+    document.body.appendChild(link);
+    link.click();
+
+    // Очистка
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error("Не удалось сгенерировать CSV отчет:", error);
+  } finally {
+    setIsDownloading(false);
+  }
+};
+
+  const stats = useMemo(() => {
+    return [
+      {
+        title: "Просроченные обращения",
+        count: rawStats ? rawStats.by_status.overdue : 0,
+        icon: "pi-bell",
+        color: "bg-red-500",
+        text: "text-red-500",
+      },
+      {
+        title: "Взято в работу",
+        count: rawStats ? rawStats.by_status.in_work : 0,
+        icon: "pi-spin pi-spinner",
+        color: "bg-amber-500",
+        text: "text-amber-500",
+      },
+      {
+        title: "Решенные задачи",
+        count: rawStats ? rawStats.by_status.done : 0,
+        icon: "pi-check",
+        color: "bg-emerald-500",
+        text: "text-emerald-500",
+      },
+    ]
+  }, [rawStats]);
+
+
 
   const statusBodyTemplate = (rowData: any) => {
-    let colorClass = "bg-gray-100 text-gray-700 border-gray-200";
-
-    if (rowData.status === "Новое") {
-      colorClass = "bg-blue-50 text-blue-700 border-blue-200";
-    } else if (rowData.status === "В работе") {
-      colorClass = "bg-amber-50 text-amber-700 border-amber-200";
-    } else if (rowData.status === "Решено") {
-      colorClass = "bg-emerald-50 text-emerald-700 border-emerald-200";
-    }
+    const {label, colorClass} = getAppealStatusDisplay(rowData.status, rowData.assigneeId);
 
     return (
       <span
         className={`inline-flex items-center px-3 py-1 text-xs font-semibold rounded-lg border tracking-wide shadow-xs ${colorClass}`}
       >
-        {rowData.status}
+        {label}
       </span>
     );
   };
 
-  const priorityBodyTemplate = (rowData: any) => {
-    let colorClass = "bg-gray-100 text-gray-600";
-    if (rowData.priority === "Высокий")
-      colorClass = "bg-red-100 text-red-700 font-bold";
-    if (rowData.priority === "Средний")
-      colorClass = "bg-orange-100 text-orange-700";
-
-    return (
-      <span className={`px-2 py-0.5 rounded text-xs ${colorClass}`}>
-        {rowData.priority}
-      </span>
-    );
-  };
 
   const actionsBodyTemplate = (rowData: any) => {
     return (
@@ -251,6 +278,7 @@ export const EmployeePage = () => {
                     });
                     setTicketDialog(true);
                   }}
+                  disabled
                 />
               </div>
 
@@ -270,20 +298,10 @@ export const EmployeePage = () => {
                   className="font-medium text-gray-900 max-w-xs truncate"
                 />
                 <Column
-                  field="category"
-                  header="Категория"
-                  className="text-gray-600"
-                />
-                <Column
-                  field="priority"
-                  header="Приоритет"
-                  body={priorityBodyTemplate}
-                  className="w-28"
-                />
-                <Column
-                  field="createdAt"
+                  field="created_at"
                   header="Дата поступления"
                   className="text-gray-500 w-44"
+                  body={data => formatDate(data.created_at)}
                 />
                 <Column
                   field="status"
@@ -370,52 +388,9 @@ export const EmployeePage = () => {
                     )}
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
-                    <div className="flex flex-col gap-1.5 w-full min-w-0">
-                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        Категория
-                      </label>
-                      <Dropdown
-                        value={selectedTicket.category}
-                        options={[
-                          "Техническая поддержка",
-                          "Обслуживание техники",
-                          "Учетные записи",
-                        ]}
-                        onChange={e =>
-                          setSelectedTicket({
-                            ...selectedTicket,
-                            category: e.value,
-                          })
-                        }
-                        className="w-full border border-gray-300 rounded-xl h-[46px] flex items-center box-border"
-                        panelClassName="text-sm  p-2 mt-1"
-                        style={{ width: "100%" }}
-                      />
-                    </div>
-                    <div className="flex flex-col gap-1.5 w-full min-w-0">
-                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                        Приоритет
-                      </label>
-                      <Dropdown
-                        value={selectedTicket.priority}
-                        options={["Низкий", "Средний", "Высокий"]}
-                        onChange={e =>
-                          setSelectedTicket({
-                            ...selectedTicket,
-                            priority: e.value,
-                          })
-                        }
-                        className="w-full border border-gray-300 rounded-xl h-[46px] flex items-center box-border"
-                        panelClassName="text-sm  p-2 mt-1"
-                        style={{ width: "100%" }}
-                      />
-                    </div>
-                  </div>
-
                   <div className="flex flex-col gap-1.5">
                     <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                      Подробное описание задачи{" "}
+                      Подробное описание задачи
                       <span className="text-red-500 font-bold">*</span>
                     </label>
                     <InputTextarea
@@ -451,8 +426,8 @@ export const EmployeePage = () => {
                 <>
                   <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 flex flex-col gap-2">
                     <div className="flex justify-between text-xs text-gray-400 font-medium">
-                      <span>Автор: {selectedTicket.author}</span>
-                      <span>{selectedTicket.createdAt}</span>
+                      <span>Автор: {selectedTicket.author_name}</span>
+                      <span>{formatDate(selectedTicket.created_at)}</span>
                     </div>
                     <h3 className="font-semibold text-gray-900 text-base">
                       {selectedTicket.title}
@@ -468,7 +443,7 @@ export const EmployeePage = () => {
                     </label>
                     <Dropdown
                       value={selectedTicket.status}
-                      options={["Новое", "В работе", "Решено"]}
+                      options={[{label: "В работе",value: "in_work"}, {label: "Решено", value: "done"}, {label: "Просрочено", value: "overdue"}]}
                       onChange={e => {
                         setSelectedTicket({
                           ...selectedTicket,

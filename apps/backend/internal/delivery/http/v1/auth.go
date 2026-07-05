@@ -41,7 +41,7 @@ func (h *Handler) login(ctx iris.Context) {
 		return
 	}
 
-	access, refresh, err := h.authUC.Login(ctx.Request().Context(), input.Email, input.Password)
+	access, refresh, user, err := h.authUC.Login(ctx.Request().Context(), input.Email, input.Password)
 	if err != nil {
 		ctx.StatusCode(iris.StatusUnauthorized)
 		ctx.JSON(iris.Map{"error": err.Error()})
@@ -54,6 +54,7 @@ func (h *Handler) login(ctx iris.Context) {
 	ctx.JSON(iris.Map{
 		"access_token": access,
 		"token_type":   "Bearer",
+		"user":         user,
 	})
 }
 

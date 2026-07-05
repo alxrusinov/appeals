@@ -38,6 +38,6 @@ type UserRepository interface {
 // AuthUsecase — контракт для бизнес-логики (слой usecase)
 type AuthUsecase interface {
 	Register(ctx context.Context, fullName, email, password string) error
-	Login(ctx context.Context, email, password string) (accessToken, refreshToken string, err error)
+	Login(ctx context.Context, email, password string) (accessToken, refreshToken string, user *User, err error)
 	GetProfile(ctx context.Context, userID int) (*User, error)
 }

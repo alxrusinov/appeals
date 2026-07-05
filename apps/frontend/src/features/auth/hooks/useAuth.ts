@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../../services/api';
@@ -13,8 +14,10 @@ export interface User {
 
 // Интерфейс ответа бэкенда при успешном логине
 interface LoginResponse {
-    token: string;
+    access_token: string;
+    token_type: string;
     user: User;
+
 }
 
 export const useAuth = () => {
@@ -54,12 +57,13 @@ export const useAuth = () => {
         },
         onSuccess: (data) => {
             // Сохраняем полученный JWT-токен
-            localStorage.setItem('token', data.token);
+            console.log("Успешный логин! Ответ сервера:", data);
+            localStorage.setItem('token', data.access_token);
 
             // Синьорский трюк: ручная запись юзера в кэш React Query.
             // Нам не нужно делать лишний сетевой запрос к /auth/me, данные уже у нас.
             queryClient.setQueryData(['auth', 'me'], data.user);
-
+            console.log("Пытаюсь сделать navigate на:", data.user.role === 'citizen' ? '/cabinet' : '/workspace')
             // Автоматическое перенаправление на нужный экран на основе роли
             switch (data.user.role) {
                 case 'citizen':
@@ -71,7 +75,11 @@ export const useAuth = () => {
                 default:
                     navigate('/workspace'); // Экран для employee
             }
-        }
+        },
+        onError: (err) => {
+        console.error("Ошибка при логине:", err); // ПОСМОТРИ СЮДА
+        alert("Не удалось войти: " + (err as any).response?.data?.error || "Неизвестная ошибка");
+    }
     });
 
     // 3. Безопасный выход из системы (Логаут)

@@ -7,12 +7,16 @@ INSERT INTO departments (id, name) VALUES
 -- Заполнение пользователей (пароль у всех: password)
 INSERT INTO users (id, full_name, email, password_hash, role, created_at) VALUES
 -- Сотрудники (Исполнители)
-(1, 'Иванов Сергей Петрович', 'ivanov@appeals.gov', '$2a$10$ByI5qFRLbBc6UvB1TGBF5.d8/6tB1E3gXqW/0t29p.k3Y3hG3g2sK', 'employee', NOW()),
-(2, 'Петрова Анна Владимировна', 'petrova@appeals.gov', '$2a$10$ByI5qFRLbBc6UvB1TGBF5.d8/6tB1E3gXqW/0t29p.k3Y3hG3g2sK', 'employee', NOW()),
+(1, 'Иванов Сергей Петрович', 'employee@appeals.gov', '$2a$10$1RSakkJWULpMWJEI9DSyDOW.Jj1qD3nT6iPt71djjRKBJpgpew5HO', 'employee', NOW()),
+(2, 'Петрова Анна Владимировна', 'petrova@appeals.gov', '$2a$10$1RSakkJWULpMWJEI9DSyDOW.Jj1qD3nT6iPt71djjRKBJpgpew5HO', 'employee', NOW()),
 
 -- Граждане (Заявители)
-(3, 'Сидоров Алексей Николаевич', 'sidorov@mail.ru', '$2a$10$ByI5qFRLbBc6UvB1TGBF5.d8/6tB1E3gXqW/0t29p.k3Y3hG3g2sK', 'citizen', NOW()),
-(4, 'Кузнецова Елена Игоревна', 'kuznetsova@yandex.ru', '$2a$10$ByI5qFRLbBc6UvB1TGBF5.d8/6tB1E3gXqW/0t29p.k3Y3hG3g2sK', 'citizen', NOW());
+(3, 'Сидоров Алексей Николаевич', 'citizen@mail.ru', '$2a$10$1RSakkJWULpMWJEI9DSyDOW.Jj1qD3nT6iPt71djjRKBJpgpew5HO', 'citizen', NOW()),
+(4, 'Кузнецова Елена Игоревна', 'kuznetsova@yandex.ru', '$2a$10$1RSakkJWULpMWJEI9DSyDOW.Jj1qD3nT6iPt71djjRKBJpgpew5HO', 'citizen', NOW()),
+
+-- Администратор
+(5, 'Пупкин Модест Илларионович', 'admin@appeals.gov', '$2a$10$1RSakkJWULpMWJEI9DSyDOW.Jj1qD3nT6iPt71djjRKBJpgpew5HO', 'admin', NOW());
+
 
 -- Заполнение обращений
 INSERT INTO appeals (title, description, status, citizen_id, assignee_id, department_id, created_at, deadline_at, executed_at, resolution) VALUES

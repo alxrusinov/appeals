@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
 	"strings"
 
 	"appeals/apps/backend/internal/domain"
@@ -47,10 +48,12 @@ func (r *appealRepository) GetByID(ctx context.Context, id int) (*domain.Appeal,
 		SELECT
 			a.*,
 			d.name as department_name,
-			u.full_name as assignee_name
+			u.full_name as assignee_name,
+			author.full_name as author_name
 		FROM appeals a
 		LEFT JOIN departments d ON a.department_id = d.id
 		LEFT JOIN users u ON a.assignee_id = u.id
+		LEFT JOIN users author ON a.citizen_id = author.id
 		WHERE a.id = ?
 	`
 	var appeal domain.Appeal
@@ -69,10 +72,12 @@ func (r *appealRepository) FetchByCitizenID(ctx context.Context, citizenID int) 
 		SELECT
 			a.*,
 			d.name as department_name,
-			u.full_name as assignee_name
+			u.full_name as assignee_name,
+			author.full_name as author_name
 		FROM appeals a
 		LEFT JOIN departments d ON a.department_id = d.id
 		LEFT JOIN users u ON a.assignee_id = u.id
+		LEFT JOIN users author ON a.citizen_id = author.id
 		WHERE a.citizen_id = ?
 		ORDER BY a.created_at DESC
 	`
@@ -94,10 +99,12 @@ func (r *appealRepository) Fetch(ctx context.Context, filter domain.AppealFilter
 		SELECT
 			a.*,
 			d.name as department_name,
-			u.full_name as assignee_name
+			u.full_name as assignee_name,
+			author.full_name as author_name
 		FROM appeals a
 		LEFT JOIN departments d ON a.department_id = d.id
 		LEFT JOIN users u ON a.assignee_id = u.id
+		LEFT JOIN users author ON a.citizen_id = author.id
 	`
 
 	// 1. Полнотекстовый поиск по теме обращения
@@ -179,6 +186,10 @@ func (r *appealRepository) Fetch(ctx context.Context, filter domain.AppealFilter
 
 	var appeals []domain.Appeal
 	err := r.db.SelectContext(ctx, &appeals, baseQuery, args...)
+	log.Printf("[DEBUG] Найдено обращений: %d", len(appeals))
+	if len(appeals) > 0 {
+		log.Printf("[DEBUG] Первое обращение: %+v", appeals[0])
+	}
 	if err != nil {
 		return nil, err
 	}

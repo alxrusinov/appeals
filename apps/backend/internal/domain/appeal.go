@@ -29,6 +29,7 @@ type Appeal struct {
 	DepartmentName *string `json:"department_name,omitempty" db:"department_name"`
 	AssigneeName   *string `json:"assignee_name,omitempty" db:"assignee_name"`
 	Resolution     *string `json:"resolution,omitempty" db:"resolution"`
+	AuthorName     *string `json:"author_name,omitempty" db:"author_name"`
 }
 
 // 🎓 Метод динамического расчета просрочки (бизнес-логика UseCase уровня)

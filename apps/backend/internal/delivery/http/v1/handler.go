@@ -36,7 +36,7 @@ func NewHandler(
 }
 
 // InitRoutes настраивает дерево путей в Iris
-func (h *Handler) InitRoutes(api *iris.APIContainer) {
+func (h *Handler) InitRoutes(api iris.Party) {
 	v1 := api.Party("/api/v1")
 
 	// Публичные маршруты аутентификации

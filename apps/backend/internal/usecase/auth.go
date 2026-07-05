@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"errors"
+	"log"
 	"time"
 
 	"appeals/apps/backend/internal/config"
@@ -48,29 +49,32 @@ func (u *authUsecase) Register(ctx context.Context, fullName, email, password st
 	return u.userRepo.Create(ctx, user)
 }
 
-func (u *authUsecase) Login(ctx context.Context, email, password string) (string, string, error) {
+func (u *authUsecase) Login(ctx context.Context, email, password string) (string, string, *domain.User, error) {
 	user, err := u.userRepo.GetByEmail(ctx, email)
-	if err != nil {
-		return "", "", errors.New("неверный email или пароль")
-	}
 
+	if err != nil {
+		log.Printf("Ошибка поиска пользователя: %v", err)
+		return "", "", nil, errors.New("неверный email или пароль")
+	}
+	log.Printf("[DEBUG] Введенный пароль из запроса: '%s' (длина: %d)", password, len(password))
 	// Сверяем хеш пароля
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)); err != nil {
-		return "", "", errors.New("неверный email или пароль")
+		log.Printf("[DEBUG] Пользователь из БД: ID=%d, Email=%s, Hash=%s", user.ID, user.Email, user.PasswordHash)
+		return "", "", nil, errors.New("неверный email или пароль")
 	}
 
 	// Генерируем токены
 	accessToken, err := u.generateToken(user.ID, string(user.Role), u.cfg.JWT.AccessTTL)
 	if err != nil {
-		return "", "", err
+		return "", "", nil, err
 	}
 
 	refreshToken, err := u.generateToken(user.ID, string(user.Role), u.cfg.JWT.RefreshTTL)
 	if err != nil {
-		return "", "", err
+		return "", "", nil, err
 	}
 
-	return accessToken, refreshToken, nil
+	return accessToken, refreshToken, user, nil
 }
 
 func (u *authUsecase) GetProfile(ctx context.Context, userID int) (*domain.User, error) {
