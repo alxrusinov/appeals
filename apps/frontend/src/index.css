@@ -81,6 +81,23 @@
   justify-content: center;
 }
 
+/* Та же причина, что и у .p-inputtext выше: тема задает margin у иконки кнопки
+   (.p-button-icon-left/.p-button-icon-right), но Tailwind-овский сброс margin
+   в @layer base побеждает по приоритету layer'а — иконка и текст слипались. */
+.p-button-icon-left {
+  margin-right: 0.5rem !important;
+}
+.p-button-icon-right {
+  margin-left: 0.5rem !important;
+}
+
+/* Та же причина: тема задает padding у пунктов выпадающего списка
+   (.p-dropdown-item), но Tailwind-овский сброс padding в @layer base побеждает
+   по приоритету layer'а — пункты списка были без отступов. */
+.p-dropdown-item {
+  padding: 0.75rem 1.25rem !important;
+}
+
 /* Увеличенные кнопки (модификатор -lg) */
 .p-button-lg {
   padding: 0.875rem 1.5rem;
