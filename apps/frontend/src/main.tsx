@@ -6,7 +6,9 @@ import App from './App';
 import { queryClient } from './services/queryClient';
 
 // Импорт стилей PrimeReact (обязательно в главном файле)
-import 'primereact/resources/themes/lara-light-indigo/theme.css'; // Тема оформления
+// Тема (lara-light-green) подключается один раз в App.tsx — если продублировать её
+// здесь другой темой (было lara-light-indigo), их CSS-правила конфликтуют и, например,
+// бордер у инпутов пропадает.
 import 'primereact/resources/primereact.min.css';                 // Базовые стили компонентов
 import 'primeicons/primeicons.css';                               // Пакет иконок
 import './index.css';                                             // Твой Tailwind
