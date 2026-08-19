@@ -4,7 +4,15 @@
    БЛОК 1: Коррекция базовых компонентов PrimeReact под Tailwind v4
    ========================================================================== */
 
-/* Базовые стили для всех текстовых инпутов */
+/* Базовые стили для всех текстовых инпутов.
+   ВАЖНО: Vite автоматически оборачивает CSS из node_modules (в т.ч. тему PrimeReact)
+   в @layer primereact, а этот layer регистрируется в бандле раньше, чем @layer base
+   из Tailwind (@import "tailwindcss" объявляет "theme, base, components, utilities").
+   По спецификации CSS cascade layers порядок регистрации важнее специфичности селектора,
+   поэтому tailwind-овский preflight (border-width: 0 у всех элементов) побеждает
+   .p-inputtext{border: 1px solid ...} из темы, хотя у класса специфичность выше.
+   Правила в этом файле НЕ обёрнуты ни в какой layer, поэтому по спецификации всегда
+   побеждают любые layer'ы — сюда и возвращаем бордер/фокус явно. */
 .p-inputtext {
   padding-top: 0.75rem !important;
   padding-bottom: 0.75rem !important;
@@ -12,6 +20,24 @@
   padding-right: 1rem !important;
   font-size: 1rem !important;
   line-height: 1.5 !important;
+  background: #fff !important;
+  border: 1px solid #d1d5db !important;
+  border-radius: 6px !important;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.p-inputtext:enabled:hover {
+  border-color: #10b981 !important;
+}
+
+.p-inputtext:enabled:focus {
+  border-color: #10b981 !important;
+  outline: 0 !important;
+  box-shadow: 0 0 0 0.2rem #a7f3d0 !important;
+}
+
+.p-inputtext.p-invalid.p-component {
+  border-color: #e24c4c !important;
 }
 
 /* Увеличенные инпуты (модификатор -lg) */
