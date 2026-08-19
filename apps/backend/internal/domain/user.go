@@ -29,6 +29,12 @@ type User struct {
 	Role         UserRole  `json:"role" db:"role"`
 	CreatedAt    time.Time `json:"created_at" db:"created_at"`
 	Status       string    `json:"status" db:"status"`
+	// DepartmentID — ведомство сотрудника (задается администратором при создании/
+	// редактировании учетной записи). При назначении сотрудника исполнителем на
+	// обращение это значение автоматически переносится в Appeal.DepartmentID
+	// (см. usecase/appeal.go), чтобы ведомство обращения не могло разойтись с
+	// реальным ведомством того, кто его исполняет.
+	DepartmentID *int `json:"department_id,omitempty" db:"department_id"`
 }
 
 // Реестр сотрудников (DTO для выпадающих списков)

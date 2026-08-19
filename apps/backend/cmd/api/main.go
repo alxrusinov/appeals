@@ -77,7 +77,7 @@ func main() {
 	// Шаг 5.2: Инициализируем бизнес-логику (Business Logic / Usecases)
 	// Передаем им зависимости в виде созданных выше репозиториев
 	authUC := usecase.NewAuthUsecase(userRepo, cfg)
-	appealUC := usecase.NewAppealUsecase(appealRepo)
+	appealUC := usecase.NewAppealUsecase(appealRepo, userRepo)
 	statsUC := usecase.NewStatsUsecase(appealRepo)
 	adminUC := usecase.NewAdminUsecase(userRepo)
 

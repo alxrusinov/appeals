@@ -114,9 +114,13 @@ export const AdminPage = () => {
 
   const assignAppealMutation = useMutation({
     mutationFn: async ({ appeal, assigneeId }: { appeal: any; assigneeId: number }) => {
-      // Бэкенд ожидает status при каждом PATCH — пересылаем текущий, меняем только исполнителя
+      // Бэкенд ожидает status при каждом PATCH — пересылаем текущий, меняем только исполнителя.
+      // "overdue" — вычисляемое на лету значение (см. ComputeDynamicStatus), реальный
+      // персистентный статус всегда in_work/done — бэкенд теперь отклоняет "overdue" явным
+      // 400, так что normalize'им перед отправкой (как и в EmployeePage).
+      const status = appeal.status === "overdue" ? "in_work" : appeal.status;
       const { data } = await api.patch(`/appeals/${appeal.id}`, {
-        status: appeal.status,
+        status,
         assignee_id: assigneeId,
         resolution: appeal.resolution ?? "",
       });
@@ -124,6 +128,9 @@ export const AdminPage = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["adminAppeals"] });
+    },
+    onError: (err: any) => {
+      alert(err.response?.data?.error || "Не удалось назначить исполнителя");
     },
   });
 
@@ -286,6 +293,16 @@ export const AdminPage = () => {
     );
   };
 
+  const departmentBodyTemplate = (rowData: any) => {
+    if (rowData.role !== "employee") return <span className="text-gray-300">—</span>;
+    const dept = departments.find((d: any) => d.id === rowData.department_id);
+    return dept ? (
+      <span className="text-gray-700">{dept.name}</span>
+    ) : (
+      <span className="text-gray-400 italic text-xs">Не выбрано</span>
+    );
+  };
+
   const actionsBodyTemplate = (rowData: any) => {
     const isBlocked = rowData.status === "Заблокирован";
     return (
@@ -428,6 +445,11 @@ export const AdminPage = () => {
                   body={roleBodyTemplate}
                 />
                 <Column
+                  header="Ведомство"
+                  body={departmentBodyTemplate}
+                  className="w-48"
+                />
+                <Column
                   field="status"
                   header="Статус"
                   body={statusBodyTemplate}
@@ -482,6 +504,17 @@ export const AdminPage = () => {
                   header="Исполнитель"
                   body={assigneeBodyTemplate}
                   className="w-56"
+                />
+                <Column
+                  header="Ведомство"
+                  className="w-48 text-gray-500"
+                  body={(row: any) =>
+                    row.department_name || (
+                      <span className="text-gray-300 italic text-xs">
+                        определяется исполнителем
+                      </span>
+                    )
+                  }
                 />
               </DataTable>
             </div>
@@ -652,6 +685,32 @@ export const AdminPage = () => {
                 }}
               />
             </div>
+
+            {/* Поле: Ведомство (только для исполнителей — им можно назначать обращения).
+                Ведомство самого обращения выводится из ведомства назначенного сотрудника
+                (см. usecase/appeal.go на бэкенде), поэтому задается один раз здесь,
+                а не отдельно на каждом обращении — так они не могут разойтись. */}
+            {selectedUser.role === "employee" && (
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  Ведомство
+                </label>
+                <Dropdown
+                  value={selectedUser.department_id ?? null}
+                  options={departments.map((d: any) => ({ label: d.name, value: d.id }))}
+                  placeholder="Не выбрано"
+                  showClear
+                  onChange={e =>
+                    setSelectedUser({ ...selectedUser, department_id: e.value })
+                  }
+                  className="w-full border border-gray-300 rounded-xl bg-gray-50/30 text-gray-900 focus:border-purple-500 focus:bg-white transition-all outline-hidden"
+                  pt={{
+                    root: { className: "p-1" },
+                    input: { className: "p-2 text-sm" },
+                  }}
+                />
+              </div>
+            )}
 
             {/* Поле: Статус */}
             <div className="flex flex-col gap-1.5">

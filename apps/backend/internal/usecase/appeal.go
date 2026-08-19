@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"appeals/apps/backend/internal/domain"
@@ -9,11 +10,13 @@ import (
 
 type appealUsecase struct {
 	appealRepo domain.AppealRepository
+	userRepo   domain.UserRepository
 }
 
-func NewAppealUsecase(appealRepo domain.AppealRepository) domain.AppealUsecase {
+func NewAppealUsecase(appealRepo domain.AppealRepository, userRepo domain.UserRepository) domain.AppealUsecase {
 	return &appealUsecase{
 		appealRepo: appealRepo,
+		userRepo:   userRepo,
 	}
 }
 
@@ -109,8 +112,20 @@ func (u *appealUsecase) UpdateStatus(ctx context.Context, id int, status domain.
 			// 0 — явная просьба снять исполнителя (JSON null неотличим от "поле не передано",
 			// поэтому используем 0 как отдельный сигнал очистки; реальные ID начинаются с 1)
 			appeal.AssigneeID = nil
+			// Без исполнителя нет и владеющего обращением ведомства — обнуляем,
+			// чтобы не показывать ведомство "по памяти" от прошлого исполнителя.
+			appeal.DepartmentID = nil
 		} else {
 			appeal.AssigneeID = assigneeID
+
+			// Ведомство обращения всегда выводится из ведомства назначенного
+			// сотрудника — так appeal.DepartmentID никогда не может разойтись с
+			// реальным ведомством того, кто исполняет обращение (см. domain.User.DepartmentID).
+			assignee, err := u.userRepo.GetByID(ctx, *assigneeID)
+			if err != nil {
+				return errors.New("указанный исполнитель не найден")
+			}
+			appeal.DepartmentID = assignee.DepartmentID
 		}
 	}
 

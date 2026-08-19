@@ -20,10 +20,10 @@ func NewUserRepository(db *sqlx.DB) domain.UserRepository {
 
 func (r *userRepository) Create(ctx context.Context, user *domain.User) error {
 	query := `
-		INSERT INTO users (full_name, email, password_hash, role, created_at)
-		VALUES (?, ?, ?, ?, ?)
+		INSERT INTO users (full_name, email, password_hash, role, department_id, created_at)
+		VALUES (?, ?, ?, ?, ?, ?)
 	`
-	result, err := r.db.ExecContext(ctx, query, user.FullName, user.Email, user.PasswordHash, user.Role, user.CreatedAt)
+	result, err := r.db.ExecContext(ctx, query, user.FullName, user.Email, user.PasswordHash, user.Role, user.DepartmentID, user.CreatedAt)
 	if err != nil {
 		return err
 	}
@@ -37,7 +37,7 @@ func (r *userRepository) Create(ctx context.Context, user *domain.User) error {
 }
 
 func (r *userRepository) GetByID(ctx context.Context, id int) (*domain.User, error) {
-	query := `SELECT id, full_name, email, password_hash, role, status, created_at FROM users WHERE id = ?`
+	query := `SELECT id, full_name, email, password_hash, role, status, department_id, created_at FROM users WHERE id = ?`
 	var user domain.User
 
 	err := r.db.GetContext(ctx, &user, query, id)
@@ -51,7 +51,7 @@ func (r *userRepository) GetByID(ctx context.Context, id int) (*domain.User, err
 }
 
 func (r *userRepository) GetByEmail(ctx context.Context, email string) (*domain.User, error) {
-	query := `SELECT id, full_name, email, password_hash, role, status, created_at FROM users WHERE email = ?`
+	query := `SELECT id, full_name, email, password_hash, role, status, department_id, created_at FROM users WHERE email = ?`
 	var user domain.User
 
 	err := r.db.GetContext(ctx, &user, query, email)
@@ -77,7 +77,7 @@ func (r *userRepository) GetEmployees(ctx context.Context) ([]domain.EmployeeRec
 
 func (r *userRepository) FetchUsers(ctx context.Context) ([]domain.User, error) {
 	// Исключаем password_hash из выборки ради безопасности
-	query := `SELECT id, full_name, email, role, status, created_at FROM users ORDER BY id DESC`
+	query := `SELECT id, full_name, email, role, status, department_id, created_at FROM users ORDER BY id DESC`
 	var users []domain.User
 
 	err := r.db.SelectContext(ctx, &users, query)
@@ -90,10 +90,10 @@ func (r *userRepository) FetchUsers(ctx context.Context) ([]domain.User, error) 
 func (r *userRepository) Update(ctx context.Context, user *domain.User) error {
 	query := `
 		UPDATE users
-		SET full_name = ?, email = ?, role = ?, status = ?
+		SET full_name = ?, email = ?, role = ?, status = ?, department_id = ?
 		WHERE id = ?
 	`
-	_, err := r.db.ExecContext(ctx, query, user.FullName, user.Email, user.Role, user.Status, user.ID)
+	_, err := r.db.ExecContext(ctx, query, user.FullName, user.Email, user.Role, user.Status, user.DepartmentID, user.ID)
 	return err
 }
 
