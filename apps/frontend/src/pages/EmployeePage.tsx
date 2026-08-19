@@ -163,7 +163,14 @@ export const EmployeePage = () => {
           label="Открыть"
           className="p-button-text p-button-sm text-purple-600 hover:bg-purple-50 px-3 py-1.5 rounded-lg font-medium gap-2"
           onClick={() => {
-            setSelectedTicket({ ...rowData });
+            // "overdue" в rowData.status — вычисленное на лету значение (см.
+            // ComputeDynamicStatus), в БД это все еще "in_work". Для селекта статуса
+            // используем реальное значение, иначе он не попадет ни в один из
+            // выбираемых пунктов и при сохранении без изменений бэкенд отклонит запрос.
+            setSelectedTicket({
+              ...rowData,
+              status: rowData.status === "overdue" ? "in_work" : rowData.status,
+            });
             setTicketDialog(true);
           }}
         />
@@ -299,10 +306,13 @@ export const EmployeePage = () => {
                     </label>
                     <Dropdown
                       value={selectedTicket.status}
+                      // "Просрочено" — вычисляемый статус (см. ComputeDynamicStatus на бэкенде),
+                      // а не реальное состояние обращения: выбрать его вручную нельзя (бэкенд
+                      // такое значение тоже отклонит). По дедлайну обращение "в работе" само
+                      // отображается просроченным — его нужно просто закрыть, переведя в "Решено".
                       options={[
                         { label: "В работе", value: "in_work" },
                         { label: "Решено", value: "done" },
-                        { label: "Просрочено", value: "overdue" },
                       ]}
                       onChange={e => {
                         setSelectedTicket({
@@ -315,9 +325,11 @@ export const EmployeePage = () => {
                             resolution: undefined,
                           });
                       }}
-                      className="w-full border border-gray-300 rounded-xl h-[46px] flex items-center box-border"
-                      panelClassName="text-sm p-2 mt-1"
-                      style={{ width: "100%" }}
+                      className="w-full border border-gray-300 rounded-xl bg-gray-50/30 text-gray-900 focus:border-purple-500 focus:bg-white transition-all outline-hidden"
+                      pt={{
+                        root: { className: "p-1" },
+                        input: { className: "p-2 text-sm" },
+                      }}
                     />
                   </div>
 

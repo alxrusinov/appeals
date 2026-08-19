@@ -84,6 +84,28 @@ func (u *authUsecase) GetProfile(ctx context.Context, userID int) (*domain.User,
 	return u.userRepo.GetByID(ctx, userID)
 }
 
+func (u *authUsecase) ChangePassword(ctx context.Context, userID int, oldPassword, newPassword string) error {
+	if len(newPassword) < 6 {
+		return errors.New("новый пароль должен содержать не менее 6 символов")
+	}
+
+	user, err := u.userRepo.GetByID(ctx, userID)
+	if err != nil {
+		return errors.New("пользователь не найден")
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(oldPassword)); err != nil {
+		return errors.New("неверный текущий пароль")
+	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+
+	return u.userRepo.UpdatePassword(ctx, userID, string(hashedPassword))
+}
+
 // Вспомогательный метод для сборки JWT
 func (u *authUsecase) generateToken(userID int, role string, ttl time.Duration) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{

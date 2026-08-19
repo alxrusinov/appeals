@@ -15,6 +15,11 @@ type loginInput struct {
 	Password string `json:"password" validate:"required"`
 }
 
+type changePasswordInput struct {
+	OldPassword string `json:"old_password" validate:"required"`
+	NewPassword string `json:"new_password" validate:"required,min=6"`
+}
+
 func (h *Handler) register(ctx iris.Context) {
 	var input registerInput
 	if err := ctx.ReadJSON(&input); err != nil {
@@ -69,4 +74,23 @@ func (h *Handler) me(ctx iris.Context) {
 		return
 	}
 	ctx.JSON(user)
+}
+
+// changePassword обрабатывает POST /api/v1/auth/change-password (доступно любой
+// авторизованной роли). Актуально в том числе для пользователей с временным
+// паролем, выданным администратором при создании учетной записи.
+func (h *Handler) changePassword(ctx iris.Context) {
+	var input changePasswordInput
+	if err := ctx.ReadJSON(&input); err != nil {
+		respondError(ctx, iris.StatusBadRequest, "неверный формат запроса")
+		return
+	}
+
+	err := h.authUC.ChangePassword(ctx.Request().Context(), getUserID(ctx), input.OldPassword, input.NewPassword)
+	if err != nil {
+		respondError(ctx, iris.StatusBadRequest, err.Error())
+		return
+	}
+
+	ctx.JSON(iris.Map{"message": "пароль успешно изменен"})
 }

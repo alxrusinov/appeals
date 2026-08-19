@@ -55,6 +55,8 @@ type UserRepository interface {
 	FetchUsers(ctx context.Context) ([]User, error)
 	Update(ctx context.Context, user *User) error
 	GetStatsSummary(ctx context.Context) ([]StatRecord, error)
+	// UpdatePassword перезаписывает хеш пароля пользователя, не трогая остальные поля
+	UpdatePassword(ctx context.Context, userID int, newPasswordHash string) error
 }
 
 // AuthUsecase — контракт для бизнес-логики (слой usecase)
@@ -62,6 +64,10 @@ type AuthUsecase interface {
 	Register(ctx context.Context, fullName, email, password string) error
 	Login(ctx context.Context, email, password string) (accessToken, refreshToken string, user *User, err error)
 	GetProfile(ctx context.Context, userID int) (*User, error)
+	// ChangePassword проверяет старый пароль и заменяет его на новый.
+	// Актуально в том числе для пользователей, заведенных администратором с
+	// временным паролем (см. AdminUsecase.CreateUser) — им нужно способ его сменить.
+	ChangePassword(ctx context.Context, userID int, oldPassword, newPassword string) error
 }
 
 type AdminUsecase interface {

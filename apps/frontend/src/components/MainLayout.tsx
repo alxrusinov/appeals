@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { NavLink, Outlet } from "react-router-dom";
 import { Button } from "primereact/button";
 import { useAuth } from "../features/auth/hooks/useAuth";
+import { ChangePasswordModal } from "../features/auth/components/ChangePasswordModal";
 
 interface MainLayoutProps {
   user:
@@ -14,6 +16,7 @@ interface MainLayoutProps {
 
 export const MainLayout = ({ user }: MainLayoutProps) => {
   const { logout } = useAuth();
+  const [passwordModalVisible, setPasswordModalVisible] = useState(false);
 
   // Функция для стилизации активных ссылок
   const linkClass = ({ isActive }: { isActive: boolean }) =>
@@ -84,6 +87,14 @@ export const MainLayout = ({ user }: MainLayoutProps) => {
           </div>
 
           <Button
+            icon="pi pi-key"
+            label="Сменить пароль"
+            text
+            onClick={() => setPasswordModalVisible(true)}
+            className="hidden sm:inline-flex gap-2 px-3 py-2 rounded-xl text-gray-600 hover:bg-gray-100 font-medium text-sm transition-colors"
+          />
+
+          <Button
             icon="pi pi-sign-out"
             label="Выйти"
             severity="danger"
@@ -98,6 +109,11 @@ export const MainLayout = ({ user }: MainLayoutProps) => {
       <main className="flex-grow w-full flex flex-col box-border">
         <Outlet />
       </main>
+
+      <ChangePasswordModal
+        visible={passwordModalVisible}
+        onHide={() => setPasswordModalVisible(false)}
+      />
     </div>
   );
 };

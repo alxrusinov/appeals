@@ -120,8 +120,16 @@ func (h *Handler) updateAppealStatus(ctx iris.Context) {
 		return
 	}
 
+	// "overdue" — вычисляемый статус (см. domain.ComputeDynamicStatus), а не реальное
+	// состояние обращения: он не хранится осознанно и не может быть выставлен вручную.
+	status := domain.AppealStatus(input.Status)
+	if status != domain.StatusInWork && status != domain.StatusDone {
+		respondError(ctx, iris.StatusBadRequest, "статус может быть только 'in_work' или 'done'")
+		return
+	}
+
 	err = h.appealUC.UpdateStatus(
-		ctx.Request().Context(), id, domain.AppealStatus(input.Status), input.AssigneeID, input.Resolution,
+		ctx.Request().Context(), id, status, input.AssigneeID, input.Resolution,
 		getUserID(ctx), getUserRole(ctx),
 	)
 	if err != nil {

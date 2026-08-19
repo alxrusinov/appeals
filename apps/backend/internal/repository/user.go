@@ -97,6 +97,11 @@ func (r *userRepository) Update(ctx context.Context, user *domain.User) error {
 	return err
 }
 
+func (r *userRepository) UpdatePassword(ctx context.Context, userID int, newPasswordHash string) error {
+	_, err := r.db.ExecContext(ctx, `UPDATE users SET password_hash = ? WHERE id = ?`, newPasswordHash, userID)
+	return err
+}
+
 func (r *userRepository) GetStatsSummary(ctx context.Context) ([]domain.StatRecord, error) {
 	var totalAppeals, inWorkAppeals, doneAppeals int
 

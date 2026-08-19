@@ -49,6 +49,9 @@ func (h *Handler) InitRoutes(api iris.Party) {
 		auth.Post("/login", h.login)
 		auth.Post("/logout", h.logout)
 		auth.Get("/me", middleware.AuthMiddleware(h.cfg), h.me)
+		// Смена пароля доступна любой авторизованной роли — актуально в т.ч. для
+		// пользователей с временным паролем, выданным администратором
+		auth.Post("/change-password", middleware.AuthMiddleware(h.cfg), h.changePassword)
 	}
 
 	// Защищенная зона (требуется авторизация)
