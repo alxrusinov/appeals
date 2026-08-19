@@ -105,7 +105,13 @@ func (u *appealUsecase) UpdateStatus(ctx context.Context, id int, status domain.
 	}
 
 	if assigneeID != nil {
-		appeal.AssigneeID = assigneeID
+		if *assigneeID == 0 {
+			// 0 — явная просьба снять исполнителя (JSON null неотличим от "поле не передано",
+			// поэтому используем 0 как отдельный сигнал очистки; реальные ID начинаются с 1)
+			appeal.AssigneeID = nil
+		} else {
+			appeal.AssigneeID = assigneeID
+		}
 	}
 
 	appeal.Status = status

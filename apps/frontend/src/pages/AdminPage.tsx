@@ -335,7 +335,9 @@ export const AdminPage = () => {
       placeholder="Не назначен"
       showClear
       onChange={e =>
-        e.value && assignAppealMutation.mutate({ appeal: rowData, assigneeId: e.value })
+        // e.value === null при клике на крестик очистки — шлем 0, это сигнал бэкенду
+        // явно снять исполнителя (JSON null неотличим от "поле не передано")
+        assignAppealMutation.mutate({ appeal: rowData, assigneeId: e.value ?? 0 })
       }
       className="w-full border border-gray-300 rounded-lg"
       pt={{ root: { className: "text-sm" }, input: { className: "p-2 text-sm" } }}
