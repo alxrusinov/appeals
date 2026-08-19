@@ -9,6 +9,7 @@ import { Dialog } from "primereact/dialog";
 // Импорт хуков и компонентов
 import { useCitizenAppeals } from "../features/appeals/hooks/useAppeals";
 import { NewAppealModal } from "../features/appeals/components/NewAppealModal";
+import { SecondaryButton, PrimaryButton } from "../components/buttons";
 import type { Appeal } from "../features/appeals/types";
 
 export const CitizenPage = () => {
@@ -101,19 +102,10 @@ export const CitizenPage = () => {
             исполнения
           </p>
         </div>
-        <Button
+        <PrimaryButton
           label="Подать новое обращение"
           icon="pi pi-plus"
           onClick={() => setModalVisible(true)}
-          pt={{
-            root: {
-              className: `
-                    flex items-center gap-2
-                    px-5 py-2.5 rounded-xl font-medium shadow-xs
-                    bg-green-500 hover:bg-green-600 border-green-500 text-white transition-colors duration-200
-                    `,
-            },
-          }}
         />
       </div>
 
@@ -298,18 +290,9 @@ export const CitizenPage = () => {
           )}
         </div>
         <div className="border-t border-gray-100 p-4 bg-gray-50 flex justify-end">
-          <Button
+          <SecondaryButton
             label="Закрыть"
             onClick={() => setDetailVisible(false)}
-            pt={{
-              root: {
-                className: `
-                    px-4 py-2.5 rounded-xl font-medium
-                    bg-gray-500 hover:bg-gray-600 border-gray-500 text-white
-                    transition-colors duration-200
-                    `,
-              },
-            }}
           />
         </div>
       </Dialog>

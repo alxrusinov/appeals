@@ -28,14 +28,6 @@ func NewAdminUsecase(repo domain.UserRepository) *AdminUsecase {
 	return &AdminUsecase{repo: repo}
 }
 
-func (u *AdminUsecase) RelinkRepo(repo domain.UserRepository) {
-	u.repo = repo
-}
-
-func (u *AdminUsecase) Relink(repo domain.UserRepository) {
-	u.repo = repo
-}
-
 func (u *AdminUsecase) GetAllUsers(ctx context.Context) ([]domain.User, error) {
 	return u.repo.FetchUsers(ctx)
 }

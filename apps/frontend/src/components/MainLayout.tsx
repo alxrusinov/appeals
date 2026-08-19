@@ -1,6 +1,6 @@
 import { NavLink, Outlet } from "react-router-dom";
 import { Button } from "primereact/button";
-import { useLogout } from "../hooks/useLogout";
+import { useAuth } from "../features/auth/hooks/useAuth";
 
 interface MainLayoutProps {
   user:
@@ -13,7 +13,7 @@ interface MainLayoutProps {
 }
 
 export const MainLayout = ({ user }: MainLayoutProps) => {
-  const logout = useLogout();
+  const { logout } = useAuth();
 
   // Функция для стилизации активных ссылок
   const linkClass = ({ isActive }: { isActive: boolean }) =>

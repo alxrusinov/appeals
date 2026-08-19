@@ -26,10 +26,10 @@ func (u *statsUsecase) GetRealtime(ctx context.Context) (*domain.RealtimeStats, 
 		return nil, err
 	}
 
+	domain.ApplyDynamicStatuses(appeals)
+
 	stats := &domain.RealtimeStats{}
 	for i := range appeals {
-		appeals[i].ComputeDynamicStatus()
-
 		if appeals[i].Status == domain.StatusInWork {
 			stats.InWorkCount++
 			stats.ActiveTotal++
@@ -75,8 +75,9 @@ func (u *statsUsecase) GetSummary(ctx context.Context, from, to time.Time) (*dom
 
 	overdueCount := 0
 
+	domain.ApplyDynamicStatuses(appeals)
+
 	for i := range appeals {
-		appeals[i].ComputeDynamicStatus()
 		statusStr := string(appeals[i].Status)
 		summary.ByStatus[statusStr]++
 

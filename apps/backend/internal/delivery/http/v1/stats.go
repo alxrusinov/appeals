@@ -13,8 +13,7 @@ func (h *Handler) getStatsRealtime(ctx iris.Context) {
 	stats, err := h.statsUC.GetRealtime(ctx.Request().Context())
 	if err != nil {
 		ctx.Application().Logger().Errorf("Ошибка получения realtime статистики: %v", err)
-		ctx.StatusCode(iris.StatusInternalServerError)
-		ctx.JSON(iris.Map{"error": "не удалось собрать оперативную статистику"})
+		respondError(ctx, iris.StatusInternalServerError, "не удалось собрать оперативную статистику")
 		return
 	}
 
@@ -35,8 +34,7 @@ func (h *Handler) getStatsSummary(ctx iris.Context) {
 	if fromStr != "" {
 		from, err = time.Parse(time.DateOnly, fromStr) // Формат "2006-01-02"
 		if err != nil {
-			ctx.StatusCode(iris.StatusBadRequest)
-			ctx.JSON(iris.Map{"error": "неверный формат параметра 'from'. Используйте YYYY-MM-DD"})
+			respondError(ctx, iris.StatusBadRequest, "неверный формат параметра 'from'. Используйте YYYY-MM-DD")
 			return
 		}
 	} else {
@@ -47,8 +45,7 @@ func (h *Handler) getStatsSummary(ctx iris.Context) {
 	if toStr != "" {
 		to, err = time.Parse(time.DateOnly, toStr)
 		if err != nil {
-			ctx.StatusCode(iris.StatusBadRequest)
-			ctx.JSON(iris.Map{"error": "неверный формат параметра 'to'. Используйте YYYY-MM-DD"})
+			respondError(ctx, iris.StatusBadRequest, "неверный формат параметра 'to'. Используйте YYYY-MM-DD")
 			return
 		}
 		// Чтобы захватить весь последний день до конца суток (23:59:59), сдвигаем границу
@@ -59,16 +56,14 @@ func (h *Handler) getStatsSummary(ctx iris.Context) {
 
 	// Защита от логической ошибки "дата начала позже даты конца"
 	if from.After(to) {
-		ctx.StatusCode(iris.StatusBadRequest)
-		ctx.JSON(iris.Map{"error": "дата начала периода (from) не может быть позже даты окончания (to)"})
+		respondError(ctx, iris.StatusBadRequest, "дата начала периода (from) не может быть позже даты окончания (to)")
 		return
 	}
 
 	stats, err := h.statsUC.GetSummary(ctx.Request().Context(), from, to)
 	if err != nil {
 		ctx.Application().Logger().Errorf("Ошибка расчета сводной статистики: %v", err)
-		ctx.StatusCode(iris.StatusInternalServerError)
-		ctx.JSON(iris.Map{"error": "критическая ошибка при обработке аналитических данных"})
+		respondError(ctx, iris.StatusInternalServerError, "критическая ошибка при обработке аналитических данных")
 		return
 	}
 

@@ -13,6 +13,9 @@ import { InputTextarea } from "primereact/inputtextarea";
 import { api } from "../services/api";
 import { getAppealStatusDisplay } from "../utils/appealStatus";
 import { formatDate } from "../utils/date";
+import { downloadCsv, todayForFilename } from "../utils/csv";
+import { SecondaryButton, PrimaryButton } from "../components/buttons";
+import { StatCard } from "../components/StatCard";
 
 export const EmployeePage = () => {
   const queryClient = useQueryClient();
@@ -109,45 +112,18 @@ export const EmployeePage = () => {
 
     setIsDownloading(true);
     try {
-      // 1. Формируем тело CSV
       const header =
         "ID;Заголовок;ФИО сотрудника;ФИО Гражданина;Статус;Дата создания\n";
+      const rows = tickets.map((t: any) => [
+        t.id,
+        t.title,
+        t.assignee_name,
+        t.author_name,
+        t.status,
+        t.created_at,
+      ]);
 
-      const body = tickets
-        .map(
-          (t: {
-            id: any;
-            title: any;
-            assignee_name: any;
-            author_name: any;
-            status: any;
-            created_at: any;
-          }) =>
-            `${t.id};${t.title || ""};${t.assignee_name || ""};${t.author_name || ""};${t.status || ""};${t.created_at || ""}`,
-        )
-        .join("\n");
-
-      const csvContent = header + body;
-
-      // 2. Создаем Blob с BOM для корректного отображения кириллицы в Excel
-      const blob = new Blob(["\uFEFF" + csvContent], {
-        type: "text/csv;charset=utf-8;",
-      });
-
-      // 3. Создаем временную ссылку для скачивания
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-
-      const date = new Date().toISOString().split("T")[0];
-      link.setAttribute("download", `my_tasks_${date}.csv`);
-
-      document.body.appendChild(link);
-      link.click();
-
-      // Очистка
-      link.remove();
-      window.URL.revokeObjectURL(url);
+      downloadCsv(`my_tasks_${todayForFilename()}.csv`, header, rows);
     } catch (error) {
       console.error("Не удалось сгенерировать CSV отчет:", error);
     } finally {
@@ -225,44 +201,18 @@ export const EmployeePage = () => {
             решений
           </p>
         </div>
-        <Button
+        <SecondaryButton
           label="Скачать отчет"
           icon="pi pi-download mr-2"
           loading={isDownloading}
           onClick={handleDownloadReport}
-          pt={{
-            root: {
-              className: `
-                    px-4 py-2.5 rounded-xl font-medium
-                    bg-gray-500 hover:bg-gray-600 border-gray-500 text-white
-                    transition-colors duration-200
-                    `,
-            },
-          }}
         />
       </div>
 
       {/* Метрики / Статистика */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {stats.map((stat: any, idx: number) => (
-          <div
-            key={idx}
-            className="bg-white p-6 rounded-2xl border border-gray-200 shadow-xs flex items-center justify-between hover:shadow-md transition-shadow duration-200"
-          >
-            <div className="flex flex-col gap-1">
-              <span className="text-sm font-medium text-gray-400 uppercase tracking-wider">
-                {stat.title}
-              </span>
-              <span className="text-3xl font-bold text-gray-900">
-                {stat.count}
-              </span>
-            </div>
-            <div
-              className={`w-12 h-12 rounded-xl ${stat.color} bg-opacity-10 flex items-center justify-center`}
-            >
-              <i className={`pi ${stat.icon} ${stat.text} text-xl`} />
-            </div>
-          </div>
+        {stats.map((stat, idx) => (
+          <StatCard key={idx} {...stat} />
         ))}
       </div>
 
@@ -278,7 +228,7 @@ export const EmployeePage = () => {
                 <h2 className="text-lg font-semibold text-gray-800">
                   Обращения в работе
                 </h2>
-                <Button
+                <PrimaryButton
                   label="Создать обращение"
                   icon="pi pi-plus-circle mr-2"
                   onClick={() => {
@@ -290,18 +240,6 @@ export const EmployeePage = () => {
                       resolution: "",
                     });
                     setTicketDialog(true);
-                  }}
-                  pt={{
-                    root: opt => ({
-                      className: `
-                        px-5 py-2.5 rounded-xl font-medium shadow-xs transition-colors duration-200
-                        ${
-                          opt?.props?.disabled
-                            ? "bg-gray-300 border-gray-300 text-gray-500 cursor-not-allowed opacity-60" // Стили для disabled
-                            : "bg-green-500 border-green-500 text-white hover:bg-green-600" // Активные стили
-                        }
-                      `,
-                    }),
                   }}
                   disabled
                 />
@@ -363,33 +301,11 @@ export const EmployeePage = () => {
         }}
         footer={
           <>
-            <Button
-              label="Отмена"
-              type="button"
-              onClick={closeDialog}
-              pt={{
-                root: {
-                  className: `
-                    px-4 py-2.5 rounded-xl font-medium
-                    bg-gray-500 hover:bg-gray-600 border-gray-500 text-white
-                    transition-colors duration-200
-                    `,
-                },
-              }}
-            />
-            <Button
+            <SecondaryButton label="Отмена" type="button" onClick={closeDialog} />
+            <PrimaryButton
               label={selectedTicket?.id ? "Сохранить" : "Создать"}
-              severity="success"
               loading={saveTicketMutation.isPending}
               onClick={handleSaveTicket}
-              pt={{
-                root: {
-                  className: `
-                    px-5 py-2.5 rounded-xl font-medium shadow-xs
-                    bg-green-500 hover:bg-green-600 border-green-500 text-white transition-colors duration-200
-                    `,
-                },
-              }}
             />
           </>
         }
@@ -507,7 +423,7 @@ export const EmployeePage = () => {
                   <div className="flex flex-col gap-1.5">
                     <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
                       Ход решения / Заключение
-                      {selectedTicket.status === "Решено" && (
+                      {selectedTicket.status === "done" && (
                         <span className="text-red-500 font-bold"> *</span>
                       )}
                     </label>

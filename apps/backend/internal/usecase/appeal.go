@@ -69,9 +69,7 @@ func (u *appealUsecase) GetListForEmployee(ctx context.Context, filter domain.Ap
 	}
 
 	// 🎓 Изюминка диплома: Пересчитываем статус на лету перед передачей в контроллер
-	for i := range appeals {
-		appeals[i].ComputeDynamicStatus()
-	}
+	domain.ApplyDynamicStatuses(appeals)
 
 	return appeals, nil
 }
@@ -84,9 +82,7 @@ func (u *appealUsecase) GetListForCitizen(ctx context.Context, citizenID int) ([
 	}
 
 	// Пересчитываем статусы для ЛК
-	for i := range appeals {
-		appeals[i].ComputeDynamicStatus()
-	}
+	domain.ApplyDynamicStatuses(appeals)
 
 	return appeals, nil
 }

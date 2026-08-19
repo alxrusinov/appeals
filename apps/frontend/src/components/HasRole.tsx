@@ -1,4 +1,5 @@
 import React from 'react';
+import { hasAllowedRole } from '../utils/roles';
 
 interface Props {
     allowedRoles: string[];
@@ -7,7 +8,7 @@ interface Props {
 }
 
 export const HasRole = ({ allowedRoles, userRole, children }: Props) => {
-    if (!userRole || !allowedRoles.includes(userRole)) {
+    if (!hasAllowedRole(userRole, allowedRoles)) {
         return null; // Просто не рендерим кнопку/блок
     }
     return <>{children}</>;

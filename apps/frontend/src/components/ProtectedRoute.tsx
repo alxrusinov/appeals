@@ -1,4 +1,5 @@
 import { Navigate, Outlet } from 'react-router-dom';
+import { hasAllowedRole } from '../utils/roles';
 
 interface Props {
     allowedRoles: string[];
@@ -11,7 +12,7 @@ export const ProtectedRoute = ({ allowedRoles, userRole }: Props) => {
         return <Navigate to="/login" replace />;
     }
 
-    if (!allowedRoles.includes(userRole)) {
+    if (!hasAllowedRole(userRole, allowedRoles)) {
         // Если роль не подходит — на дефолтную страницу роли (или 403)
         return <Navigate to="/unauthorized" replace />;
     }

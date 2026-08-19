@@ -87,6 +87,8 @@ export const useAuth = () => {
     const logout = () => {
         // Удаляем токен авторизации
         localStorage.removeItem('token');
+        // Роль, сохраненная для MSW-моков (см. mocks/handlers/auth.mocks.ts)
+        sessionStorage.removeItem('user_role');
 
         // Сбрасываем стейт пользователя
         queryClient.setQueryData(['auth', 'me'], null);

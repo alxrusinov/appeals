@@ -10,8 +10,7 @@ func (h *Handler) getEmployeesDictionary(ctx iris.Context) {
 	employees, err := h.userRepo.GetEmployees(ctx.Request().Context())
 	if err != nil {
 		ctx.Application().Logger().Errorf("Ошибка получения справочника сотрудников: %v", err)
-		ctx.StatusCode(iris.StatusInternalServerError)
-		ctx.JSON(iris.Map{"error": "не удалось загрузить список сотрудников"})
+		respondError(ctx, iris.StatusInternalServerError, "не удалось загрузить список сотрудников")
 		return
 	}
 
@@ -25,8 +24,7 @@ func (h *Handler) getDepartmentsDictionary(ctx iris.Context) {
 	depts, err := h.deptRepo.GetAll(ctx.Request().Context())
 	if err != nil {
 		ctx.Application().Logger().Errorf("Ошибка получения справочника ведомств: %v", err)
-		ctx.StatusCode(iris.StatusInternalServerError)
-		ctx.JSON(iris.Map{"error": "не удалось загрузить список отделов"})
+		respondError(ctx, iris.StatusInternalServerError, "не удалось загрузить список отделов")
 		return
 	}
 

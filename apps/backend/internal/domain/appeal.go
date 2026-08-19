@@ -40,6 +40,15 @@ func (a *Appeal) ComputeDynamicStatus() {
 	}
 }
 
+// ApplyDynamicStatuses пересчитывает динамический статус (см. ComputeDynamicStatus)
+// для каждого обращения в срезе. Вынесено отдельно, чтобы не повторять один и тот же
+// цикл в usecase-слое статистики и обращений.
+func ApplyDynamicStatuses(appeals []Appeal) {
+	for i := range appeals {
+		appeals[i].ComputeDynamicStatus()
+	}
+}
+
 // Фильтры для панели мониторинга сотрудника
 type AppealFilter struct {
 	Search       string

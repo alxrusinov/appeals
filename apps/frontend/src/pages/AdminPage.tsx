@@ -10,6 +10,9 @@ import { InputText } from "primereact/inputtext";
 import { Dropdown } from "primereact/dropdown";
 
 import { api } from "../services/api";
+import { downloadCsv, todayForFilename } from "../utils/csv";
+import { SecondaryButton, PrimaryButton } from "../components/buttons";
+import { StatCard } from "../components/StatCard";
 
 export const AdminPage = () => {
   const queryClient = useQueryClient();
@@ -97,39 +100,10 @@ export const AdminPage = () => {
 
     setIsDownloading(true);
     try {
-      // 1. Формируем заголовки
       const header = "ID;ФИО сотрудника;Email;Роль в системе;Статус\n";
+      const rows = users.map((u: any) => [u.id, u.name, u.email, u.role, u.status]);
 
-      // 2. Формируем тело, экранируя кавычки (на случай, если в данных есть запятые или точки с запятой)
-      const body = users
-        .map((u: any) =>
-          [u.id, u.name, u.email, u.role, u.status]
-            .map(value => `"${String(value ?? "").replace(/"/g, '""')}"`)
-            .join(";"),
-        )
-        .join("\n");
-
-      const csvContent = header + body;
-
-      // 3. Создаем Blob с BOM для корректного отображения кириллицы в Excel
-      const blob = new Blob(["\uFEFF" + csvContent], {
-        type: "text/csv;charset=utf-8;",
-      });
-
-      // 4. Логика скачивания
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-
-      const date = new Date().toISOString().split("T")[0];
-      link.setAttribute("download", `employees_report_${date}.csv`);
-
-      document.body.appendChild(link);
-      link.click();
-
-      // Очистка
-      link.remove();
-      window.URL.revokeObjectURL(url);
+      downloadCsv(`employees_report_${todayForFilename()}.csv`, header, rows);
     } catch (error) {
       console.error("Не удалось сгенерировать CSV отчет:", error);
       // Здесь можно добавить уведомление для пользователя, например: toast.error("Ошибка при скачивании");
@@ -234,44 +208,18 @@ export const AdminPage = () => {
             аналитикой
           </p>
         </div>
-        <Button
+        <SecondaryButton
           label="Скачать отчет"
           icon="pi pi-download mr-2"
           loading={isDownloading}
           onClick={handleDownloadReport}
-          pt={{
-            root: {
-              className: `
-                    px-4 py-2.5 rounded-xl font-medium
-                    bg-gray-500 hover:bg-gray-600 border-gray-500 text-white
-                    transition-colors duration-200
-                    `,
-            },
-          }}
         />
       </div>
 
       {/* БЛОК АНАЛИТИКИ */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {stats.map((stat: any, idx: number) => (
-          <div
-            key={idx}
-            className="bg-white p-6 rounded-2xl border border-gray-200 shadow-xs flex items-center justify-between hover:shadow-md transition-shadow duration-200"
-          >
-            <div className="flex flex-col gap-1">
-              <span className="text-sm font-medium text-gray-400 uppercase tracking-wider">
-                {stat.title}
-              </span>
-              <span className="text-3xl font-bold text-gray-900">
-                {stat.count}
-              </span>
-            </div>
-            <div
-              className={`w-12 h-12 rounded-xl ${stat.color} bg-opacity-10 flex items-center justify-center`}
-            >
-              <i className={`pi ${stat.icon} ${stat.text} text-xl`} />
-            </div>
-          </div>
+        {stats.map((stat, idx) => (
+          <StatCard key={idx} {...stat} />
         ))}
       </div>
 
@@ -289,7 +237,7 @@ export const AdminPage = () => {
                 <h2 className="text-lg font-semibold text-gray-800">
                   Реестр сотрудников
                 </h2>
-                <Button
+                <PrimaryButton
                   label="Добавить сотрудника"
                   icon="pi pi-user-plus mr-2"
                   onClick={() => {
@@ -300,14 +248,6 @@ export const AdminPage = () => {
                       status: "Активен",
                     });
                     setUserDialog(true);
-                  }}
-                  pt={{
-                    root: {
-                      className: `
-                        px-5 py-2.5 rounded-xl font-medium shadow-xs
-                        bg-green-500 hover:bg-green-600 border-green-500 text-white transition-colors duration-200
-                        `,
-                    },
                   }}
                 />
               </div>
@@ -396,31 +336,11 @@ export const AdminPage = () => {
         }}
         footer={
           <>
-            <Button
-              label="Отмена"
-              onClick={closeDialog}
-              pt={{
-                root: {
-                  className: `
-                    px-4 py-2.5 rounded-xl font-medium
-                    bg-gray-500 hover:bg-gray-600 border-gray-500 text-white
-                    transition-colors duration-200
-                    `,
-                },
-              }}
-            />
-            <Button
+            <SecondaryButton label="Отмена" onClick={closeDialog} />
+            <PrimaryButton
               label={selectedUser?.id ? "Сохранить" : "Создать"}
               loading={updateUserMutation.isPending}
               onClick={handleSaveUser}
-              pt={{
-                root: {
-                  className: `
-                    px-5 py-2.5 rounded-xl font-medium shadow-xs
-                    bg-green-500 hover:bg-green-600 border-green-500 text-white transition-colors duration-200
-                    `,
-                },
-              }}
             />
           </>
         }

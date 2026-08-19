@@ -29,11 +29,10 @@ type updateStatusInput struct {
 
 // ГРАЖДАНЕ: Получение личных обращений
 func (h *Handler) getCitizenAppeals(ctx iris.Context) {
-	citizenID := ctx.Values().GetDefault("user_id", 0).(int)
+	citizenID := getUserID(ctx)
 	appeals, err := h.appealUC.GetListForCitizen(ctx.Request().Context(), citizenID)
 	if err != nil {
-		ctx.StatusCode(iris.StatusInternalServerError)
-		ctx.JSON(iris.Map{"error": err.Error()})
+		respondError(ctx, iris.StatusInternalServerError, err.Error())
 		return
 	}
 	ctx.JSON(appeals)
@@ -41,18 +40,16 @@ func (h *Handler) getCitizenAppeals(ctx iris.Context) {
 
 // ГРАЖДАНЕ: Подача заявления
 func (h *Handler) createCitizenAppeal(ctx iris.Context) {
-	citizenID := ctx.Values().GetDefault("user_id", 0).(int)
+	citizenID := getUserID(ctx)
 	var input citizenAppealInput
 	if err := ctx.ReadJSON(&input); err != nil {
-		ctx.StatusCode(iris.StatusBadRequest)
-		ctx.JSON(iris.Map{"error": "невалидный JSON"})
+		respondError(ctx, iris.StatusBadRequest, "невалидный JSON")
 		return
 	}
 
 	appeal, err := h.appealUC.CreateByCitizen(ctx.Request().Context(), citizenID, input.Title, input.Description)
 	if err != nil {
-		ctx.StatusCode(iris.StatusInternalServerError)
-		ctx.JSON(iris.Map{"error": err.Error()})
+		respondError(ctx, iris.StatusInternalServerError, err.Error())
 		return
 	}
 	ctx.StatusCode(iris.StatusCreated)
@@ -78,8 +75,7 @@ func (h *Handler) getEmployeeAppeals(ctx iris.Context) {
 
 	appeals, err := h.appealUC.GetListForEmployee(ctx.Request().Context(), filter)
 	if err != nil {
-		ctx.StatusCode(iris.StatusInternalServerError)
-		ctx.JSON(iris.Map{"error": err.Error()})
+		respondError(ctx, iris.StatusInternalServerError, err.Error())
 		return
 	}
 	ctx.JSON(appeals)
@@ -89,15 +85,13 @@ func (h *Handler) getEmployeeAppeals(ctx iris.Context) {
 func (h *Handler) createEmployeeAppeal(ctx iris.Context) {
 	var input employeeAppealInput
 	if err := ctx.ReadJSON(&input); err != nil {
-		ctx.StatusCode(iris.StatusBadRequest)
-		ctx.JSON(iris.Map{"error": "невалидный JSON"})
+		respondError(ctx, iris.StatusBadRequest, "невалидный JSON")
 		return
 	}
 
 	appeal, err := h.appealUC.CreateByEmployee(ctx.Request().Context(), input.Title, input.Description, input.CitizenID, input.AssigneeID, input.DeadlineAt)
 	if err != nil {
-		ctx.StatusCode(iris.StatusInternalServerError)
-		ctx.JSON(iris.Map{"error": err.Error()})
+		respondError(ctx, iris.StatusInternalServerError, err.Error())
 		return
 	}
 	ctx.StatusCode(iris.StatusCreated)
@@ -108,22 +102,19 @@ func (h *Handler) createEmployeeAppeal(ctx iris.Context) {
 func (h *Handler) updateAppealStatus(ctx iris.Context) {
 	id, err := ctx.Params().GetInt("id")
 	if err != nil {
-		ctx.StatusCode(iris.StatusBadRequest)
-		ctx.JSON(iris.Map{"error": "невалидный ID обращения"})
+		respondError(ctx, iris.StatusBadRequest, "невалидный ID обращения")
 		return
 	}
 
 	var input updateStatusInput
 	if err := ctx.ReadJSON(&input); err != nil {
-		ctx.StatusCode(iris.StatusBadRequest)
-		ctx.JSON(iris.Map{"error": "невалидный JSON"})
+		respondError(ctx, iris.StatusBadRequest, "невалидный JSON")
 		return
 	}
 
 	err = h.appealUC.UpdateStatus(ctx.Request().Context(), id, domain.AppealStatus(input.Status), input.AssigneeID, input.Resolution)
 	if err != nil {
-		ctx.StatusCode(iris.StatusInternalServerError)
-		ctx.JSON(iris.Map{"error": err.Error()})
+		respondError(ctx, iris.StatusInternalServerError, err.Error())
 		return
 	}
 

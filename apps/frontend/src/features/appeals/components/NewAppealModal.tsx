@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Dialog } from "primereact/dialog";
 import { InputText } from "primereact/inputtext";
 import { InputTextarea } from "primereact/inputtextarea";
-import { Button } from "primereact/button";
+import { SecondaryButton, PrimaryButton } from "../../../components/buttons";
 import { useCreateAppeal } from "../hooks/useAppeals";
 
 type Props = { visible: boolean; onHide: () => void };
@@ -69,33 +69,8 @@ export const NewAppealModal = ({ visible, onHide }: Props) => {
         </div>
 
         <div className="flex justify-end gap-2 mt-4">
-          <Button
-            type="button"
-            label="Отмена"
-            onClick={onHide}
-            pt={{
-              root: {
-                className: `
-                    px-4 py-2.5 rounded-xl font-medium
-                    bg-gray-500 hover:bg-gray-600 border-gray-500 text-white
-                    transition-colors duration-200
-                    `,
-              },
-            }}
-          />
-          <Button
-            type="submit"
-            label="Отправить"
-            loading={isPending}
-            pt={{
-              root: {
-                className: `
-                    px-5 py-2.5 rounded-xl font-medium shadow-xs
-                    bg-green-500 hover:bg-green-600 border-green-500 text-white transition-colors duration-200
-                    `,
-              },
-            }}
-          />
+          <SecondaryButton type="button" label="Отмена" onClick={onHide} />
+          <PrimaryButton type="submit" label="Отправить" loading={isPending} />
         </div>
       </form>
     </Dialog>

@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState } from "react";
 import { InputText } from "primereact/inputtext";
-import { Button } from "primereact/button";
+import { PrimaryButton } from "../../../components/buttons";
 import { useAuth } from "../hooks/useAuth";
 
 export const LoginForm = () => {
@@ -78,19 +78,11 @@ export const LoginForm = () => {
       </div>
 
       {/* Кнопка войти */}
-      <Button
+      <PrimaryButton
         type="submit"
         label={isLoggingIn ? "Вход в систему..." : "Войти"}
         icon={isLoggingIn ? "pi pi-spin pi-spinner" : "pi pi-sign-in"}
         loading={isLoggingIn}
-        pt={{
-          root: {
-            className: `
-                    px-5 py-2.5 rounded-xl font-medium shadow-xs
-                    bg-green-500 hover:bg-green-600 border-green-500 text-white transition-colors duration-200
-                    `,
-          },
-        }}
       />
     </form>
   );
