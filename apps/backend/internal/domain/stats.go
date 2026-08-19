@@ -5,11 +5,14 @@ import (
 	"time"
 )
 
-// Срез реального времени (для счетчиков верхнего уровня)
+// Срез реального времени (для счетчиков верхнего уровня). В отличие от SummaryStats
+// не привязан к периоду создания обращения — считает по текущему состоянию всех
+// (в рамках доступа actor'а) обращений на момент запроса.
 type RealtimeStats struct {
 	ActiveTotal  int `json:"active_total"`
 	InWorkCount  int `json:"in_work_count"`
 	OverdueCount int `json:"overdue_count"`
+	DoneCount    int `json:"done_count"`
 }
 
 // Агрегированная статистика сотрудника
@@ -40,6 +43,9 @@ type SummaryStats struct {
 }
 
 type StatsUsecase interface {
-	GetRealtime(ctx context.Context) (*RealtimeStats, error)
-	GetSummary(ctx context.Context, from, to time.Time) (*SummaryStats, error)
+	// actorID/actorRole — тот, кто запрашивает статистику: для сотрудника (RoleEmployee)
+	// оба метода считают только по обращениям, назначенным лично ему (как и
+	// GetListForEmployee), для администратора — по всем.
+	GetRealtime(ctx context.Context, actorID int, actorRole UserRole) (*RealtimeStats, error)
+	GetSummary(ctx context.Context, from, to time.Time, actorID int, actorRole UserRole) (*SummaryStats, error)
 }

@@ -10,7 +10,7 @@ import (
 // Возвращает оперативный срез счетчиков (активные, в работе, просроченные) для дашборда
 func (h *Handler) getStatsRealtime(ctx iris.Context) {
 	// Передаем контекст запроса для поддержки отмены таймаутов
-	stats, err := h.statsUC.GetRealtime(ctx.Request().Context())
+	stats, err := h.statsUC.GetRealtime(ctx.Request().Context(), getUserID(ctx), getUserRole(ctx))
 	if err != nil {
 		ctx.Application().Logger().Errorf("Ошибка получения realtime статистики: %v", err)
 		respondError(ctx, iris.StatusInternalServerError, "не удалось собрать оперативную статистику")
@@ -60,7 +60,7 @@ func (h *Handler) getStatsSummary(ctx iris.Context) {
 		return
 	}
 
-	stats, err := h.statsUC.GetSummary(ctx.Request().Context(), from, to)
+	stats, err := h.statsUC.GetSummary(ctx.Request().Context(), from, to, getUserID(ctx), getUserRole(ctx))
 	if err != nil {
 		ctx.Application().Logger().Errorf("Ошибка расчета сводной статистики: %v", err)
 		respondError(ctx, iris.StatusInternalServerError, "критическая ошибка при обработке аналитических данных")

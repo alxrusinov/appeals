@@ -15,6 +15,7 @@ import { formatDate } from "../utils/date";
 import { downloadCsv, todayForFilename } from "../utils/csv";
 import { SecondaryButton, PrimaryButton } from "../components/buttons";
 import { StatCard } from "../components/StatCard";
+import { Dashboard } from "../features/stats/components/Dashboard";
 
 export const EmployeePage = () => {
   const queryClient = useQueryClient();
@@ -34,10 +35,13 @@ export const EmployeePage = () => {
     },
   });
 
+  // /stats/realtime — точный снимок на текущий момент (в отличие от /stats/summary
+  // не привязан к дате СОЗДАНИЯ обращения, поэтому просроченное обращение месячной
+  // давности тоже попадет в счетчик, а не потеряется за пределами периода)
   const { data: rawStats } = useQuery({
     queryKey: ["employeeStats"],
     queryFn: async () => {
-      const { data } = await api.get("/stats/summary");
+      const { data } = await api.get("/stats/realtime");
       return data;
     },
   });
@@ -118,21 +122,21 @@ export const EmployeePage = () => {
     return [
       {
         title: "Просроченные обращения",
-        count: rawStats ? rawStats.by_status.overdue : 0,
+        count: rawStats ? rawStats.overdue_count : 0,
         icon: "pi-bell",
         color: "bg-red-500",
         text: "text-red-500",
       },
       {
         title: "Взято в работу",
-        count: rawStats ? rawStats.by_status.in_work : 0,
+        count: rawStats ? rawStats.in_work_count : 0,
         icon: "pi-spin pi-spinner",
         color: "bg-amber-500",
         text: "text-amber-500",
       },
       {
         title: "Решенные задачи",
-        count: rawStats ? rawStats.by_status.done : 0,
+        count: rawStats ? rawStats.done_count : 0,
         icon: "pi-check",
         color: "bg-emerald-500",
         text: "text-emerald-500",
@@ -253,6 +257,10 @@ export const EmployeePage = () => {
                 <Column body={actionsBodyTemplate} className="w-32" />
               </DataTable>
             </div>
+          </TabPanel>
+
+          <TabPanel header="Аналитика" leftIcon="pi pi-chart-bar mr-2.5">
+            <Dashboard />
           </TabPanel>
         </TabView>
       </div>

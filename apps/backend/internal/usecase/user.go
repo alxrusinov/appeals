@@ -64,10 +64,6 @@ func (u *AdminUsecase) UpdateUser(ctx context.Context, user *domain.User) error 
 	return u.repo.Update(ctx, user)
 }
 
-func (u *AdminUsecase) GetStatsSummary(ctx context.Context) ([]domain.StatRecord, error) {
-	return u.repo.GetStatsSummary(ctx)
-}
-
 // DeactivateUser — мягкое удаление пользователя: физически строка (и ссылающаяся
 // на нее история обращений) не удаляется, только блокируется вход.
 func (u *AdminUsecase) DeactivateUser(ctx context.Context, id int) error {

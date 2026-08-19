@@ -19,9 +19,15 @@ func NewStatsUsecase(appealRepo domain.AppealRepository) domain.StatsUsecase {
 }
 
 // Срез счетчиков на текущую секунду для дашборда
-func (u *statsUsecase) GetRealtime(ctx context.Context) (*domain.RealtimeStats, error) {
-	// Для реалтайма берем пустой фильтр (все активные обращения)
-	appeals, err := u.appealRepo.Fetch(ctx, domain.AppealFilter{Limit: 10000})
+func (u *statsUsecase) GetRealtime(ctx context.Context, actorID int, actorRole domain.UserRole) (*domain.RealtimeStats, error) {
+	filter := domain.AppealFilter{Limit: 10000}
+	// Сотрудник видит статистику только по обращениям, назначенным ему администратором
+	// (см. domain.ErrForbidden в usecase/appeal.go — та же граница доступа)
+	if actorRole == domain.RoleEmployee {
+		filter.AssigneeID = actorID
+	}
+
+	appeals, err := u.appealRepo.Fetch(ctx, filter)
 	if err != nil {
 		return nil, err
 	}
@@ -36,6 +42,8 @@ func (u *statsUsecase) GetRealtime(ctx context.Context) (*domain.RealtimeStats, 
 		} else if appeals[i].Status == domain.StatusOverdue {
 			stats.OverdueCount++
 			stats.ActiveTotal++
+		} else if appeals[i].Status == domain.StatusDone {
+			stats.DoneCount++
 		}
 	}
 
@@ -43,13 +51,20 @@ func (u *statsUsecase) GetRealtime(ctx context.Context) (*domain.RealtimeStats, 
 }
 
 // Историческая глубокая аналитика за период
-func (u *statsUsecase) GetSummary(ctx context.Context, from, to time.Time) (*domain.SummaryStats, error) {
-	// Фильтруем обращения по дате создания
-	appeals, err := u.appealRepo.Fetch(ctx, domain.AppealFilter{
+func (u *statsUsecase) GetSummary(ctx context.Context, from, to time.Time, actorID int, actorRole domain.UserRole) (*domain.SummaryStats, error) {
+	filter := domain.AppealFilter{
 		CreatedFrom: from.Format(time.RFC3339),
 		CreatedTo:   to.Format(time.RFC3339),
 		Limit:       10000,
-	})
+	}
+	// Та же граница доступа, что и в GetRealtime/GetListForEmployee: сотрудник видит
+	// аналитику только по своим обращениям, администратор — по всем.
+	if actorRole == domain.RoleEmployee {
+		filter.AssigneeID = actorID
+	}
+
+	// Фильтруем обращения по дате создания
+	appeals, err := u.appealRepo.Fetch(ctx, filter)
 	if err != nil {
 		return nil, err
 	}

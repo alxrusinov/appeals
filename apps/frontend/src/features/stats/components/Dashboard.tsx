@@ -23,7 +23,7 @@ export const Dashboard = () => {
 
     return (
         <div className="p-6">
-            <h2 className="text-2xl font-bold mb-6">Мониторинг эффективности организации</h2>
+            <h2 className="text-2xl font-bold mb-6">Аналитика по обращениям</h2>
 
             {/* Блок 1: Realtime счетчики */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">

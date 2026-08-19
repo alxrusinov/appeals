@@ -108,6 +108,28 @@
   right: 3.25rem !important;
 }
 
+/* Та же причина: тема задает padding у карточек (.p-card-body/.p-card-content,
+   используются в Dashboard), но Tailwind-овский сброс padding в @layer base
+   обнулял их — карточки статистики/графиков были без внутренних отступов. */
+.p-card-body {
+  padding: 1.25rem !important;
+}
+.p-card-content {
+  padding: 1.25rem 0 !important;
+}
+.p-card-title {
+  margin-bottom: 0.5rem !important;
+}
+
+/* Та же причина: панель календаря (Dashboard, выбор аналитического периода)
+   и ее шапка теряли padding из темы. */
+.p-datepicker {
+  padding: 0.5rem !important;
+}
+.p-datepicker-header {
+  padding: 0.5rem !important;
+}
+
 /* Увеличенные кнопки (модификатор -lg) */
 .p-button-lg {
   padding: 0.875rem 1.5rem;

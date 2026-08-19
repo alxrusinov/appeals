@@ -37,15 +37,6 @@ type EmployeeRecord struct {
 	FullName string `json:"full_name" db:"full_name"`
 }
 
-// DTO для блока аналитики администратора
-type StatRecord struct {
-	Title string `json:"title"`
-	Count int    `json:"count"`
-	Color string `json:"color"`
-	Text  string `json:"text"`
-	Icon  string `json:"icon"`
-}
-
 // UserRepository — контракт для работы с БД (слой repository)
 type UserRepository interface {
 	Create(ctx context.Context, user *User) error
@@ -54,7 +45,6 @@ type UserRepository interface {
 	GetEmployees(ctx context.Context) ([]EmployeeRecord, error)
 	FetchUsers(ctx context.Context) ([]User, error)
 	Update(ctx context.Context, user *User) error
-	GetStatsSummary(ctx context.Context) ([]StatRecord, error)
 	// UpdatePassword перезаписывает хеш пароля пользователя, не трогая остальные поля
 	UpdatePassword(ctx context.Context, userID int, newPasswordHash string) error
 }

@@ -15,6 +15,7 @@ import { SecondaryButton, PrimaryButton } from "../components/buttons";
 import { StatCard } from "../components/StatCard";
 import { getAppealStatusDisplay } from "../utils/appealStatus";
 import { formatDate } from "../utils/date";
+import { Dashboard } from "../features/stats/components/Dashboard";
 
 export const AdminPage = () => {
   const queryClient = useQueryClient();
@@ -224,14 +225,18 @@ export const AdminPage = () => {
   const stats = useMemo(() => {
     return [
       {
-        title: "Всего обращений",
+        // rawStats берется с /admin/stats без указания периода — бэкенд по умолчанию
+        // считает только за последние 30 дней (см. getStatsSummary), поэтому подпись
+        // отражает реальный охват, а не "все обращения за все время" (это можно
+        // увидеть на вкладке "Аналитика" с выбором произвольного периода)
+        title: "Обращений за 30 дней",
         count: rawStats ? rawStats.total_count : 0,
         icon: "pi-ticket",
         color: "bg-blue-500",
         text: "text-blue-500",
       },
       {
-        title: "В работе",
+        title: "В работе (30 дней)",
         count: rawStats.by_status?.in_work ? rawStats.by_status.in_work : 0,
         icon: "pi-spin pi-spinner",
         color: "bg-amber-500",
@@ -534,6 +539,10 @@ export const AdminPage = () => {
                 />
               </DataTable>
             </div>
+          </TabPanel>
+
+          <TabPanel header="Аналитика" leftIcon="pi pi-chart-bar mr-2.5">
+            <Dashboard />
           </TabPanel>
         </TabView>
       </div>
