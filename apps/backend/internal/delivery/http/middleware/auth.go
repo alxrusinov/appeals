@@ -20,15 +20,12 @@ func AuthMiddleware(cfg *config.Config) iris.Handler {
 
 		var tokenStr string
 
-		// 1. Пытаемся взять токен из заголовка Authorization
+		// Access-токен передается только через заголовок Authorization: Bearer.
+		// В куках хранится исключительно refresh_token (HttpOnly), он не годится
+		// для авторизации API-запросов, поэтому фолбэка на куки здесь нет.
 		authHeader := ctx.GetHeader("Authorization")
 		if authHeader != "" && strings.HasPrefix(authHeader, "Bearer ") {
 			tokenStr = strings.TrimPrefix(authHeader, "Bearer ")
-		}
-
-		// 2. Fallback: если в заголовке нет, ищем в куках (HttpOnly)
-		if tokenStr == "" {
-			tokenStr = ctx.GetCookie("access_token")
 		}
 
 		if tokenStr == "" {

@@ -58,6 +58,7 @@ type AuthUsecase interface {
 
 type AdminUsecase interface {
 	GetAllUsers(ctx context.Context) ([]User, error)
-	CreateUser(ctx context.Context, user *User) error
+	// CreateUser заводит пользователя и возвращает сгенерированный временный пароль
+	CreateUser(ctx context.Context, user *User) (tempPassword string, err error)
 	UpdateUser(ctx context.Context, user *User) error
 }

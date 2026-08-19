@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"log"
 	"strings"
 
 	"appeals/apps/backend/internal/domain"
@@ -186,10 +185,6 @@ func (r *appealRepository) Fetch(ctx context.Context, filter domain.AppealFilter
 
 	var appeals []domain.Appeal
 	err := r.db.SelectContext(ctx, &appeals, baseQuery, args...)
-	log.Printf("[DEBUG] Найдено обращений: %d", len(appeals))
-	if len(appeals) > 0 {
-		log.Printf("[DEBUG] Первое обращение: %+v", appeals[0])
-	}
 	if err != nil {
 		return nil, err
 	}

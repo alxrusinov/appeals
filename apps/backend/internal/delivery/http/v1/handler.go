@@ -88,7 +88,7 @@ func (h *Handler) InitRoutes(api iris.Party) {
 
 	// Модуль статистики (Только сотрудники/админы)
 	stats := protected.Party("/stats")
-	employeeAppeals.Use(middleware.RoleMiddleware(domain.RoleEmployee, domain.RoleAdmin))
+	stats.Use(middleware.RoleMiddleware(domain.RoleEmployee, domain.RoleAdmin))
 	{
 		stats.Get("/summary", h.getStatsSummary)
 		stats.Get("/realtime", h.getStatsRealtime)

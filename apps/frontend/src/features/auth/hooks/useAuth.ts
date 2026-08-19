@@ -77,9 +77,10 @@ export const useAuth = () => {
             }
         },
         onError: (err) => {
-        console.error("Ошибка при логине:", err); // ПОСМОТРИ СЮДА
-        alert("Не удалось войти: " + (err as any).response?.data?.error || "Неизвестная ошибка");
-    }
+            console.error("Ошибка при логине:", err);
+            const serverMessage = (err as any).response?.data?.error;
+            alert("Не удалось войти: " + (serverMessage || "неизвестная ошибка"));
+        }
     });
 
     // 3. Безопасный выход из системы (Логаут)

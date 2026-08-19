@@ -56,10 +56,9 @@ func (u *authUsecase) Login(ctx context.Context, email, password string) (string
 		log.Printf("Ошибка поиска пользователя: %v", err)
 		return "", "", nil, errors.New("неверный email или пароль")
 	}
-	log.Printf("[DEBUG] Введенный пароль из запроса: '%s' (длина: %d)", password, len(password))
+
 	// Сверяем хеш пароля
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)); err != nil {
-		log.Printf("[DEBUG] Пользователь из БД: ID=%d, Email=%s, Hash=%s", user.ID, user.Email, user.PasswordHash)
 		return "", "", nil, errors.New("неверный email или пароль")
 	}
 

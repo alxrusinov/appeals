@@ -26,7 +26,7 @@ func (h *Handler) createUser(ctx iris.Context) {
 		return
 	}
 
-	err := h.adminUC.CreateUser(ctx.Request().Context(), &user)
+	tempPassword, err := h.adminUC.CreateUser(ctx.Request().Context(), &user)
 	if err != nil {
 		ctx.StatusCode(iris.StatusInternalServerError)
 		ctx.JSON(iris.Map{"error": "Не удалось создать пользователя"})
@@ -34,7 +34,12 @@ func (h *Handler) createUser(ctx iris.Context) {
 	}
 
 	ctx.StatusCode(iris.StatusCreated)
-	ctx.JSON(user)
+	// temp_password отдается один раз — фронтенд должен показать его администратору
+	// и не сохранять, но никогда больше не сможет получить повторно.
+	ctx.JSON(iris.Map{
+		"user":          user,
+		"temp_password": tempPassword,
+	})
 }
 
 // updateUser обрабатывает PUT /api/v1/admin/users/{id}

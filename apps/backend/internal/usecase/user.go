@@ -3,8 +3,22 @@ package usecase
 import (
 	"appeals/apps/backend/internal/domain"
 	"context"
+	"crypto/rand"
+	"encoding/base64"
 	"time"
+
+	"golang.org/x/crypto/bcrypt"
 )
+
+// generateTempPassword создает криптографически случайный временный пароль
+// для пользователей, заводимых администратором вручную.
+func generateTempPassword() (string, error) {
+	buf := make([]byte, 12)
+	if _, err := rand.Read(buf); err != nil {
+		return "", err
+	}
+	return base64.RawURLEncoding.EncodeToString(buf), nil
+}
 
 type AdminUsecase struct {
 	repo domain.UserRepository
@@ -26,16 +40,31 @@ func (u *AdminUsecase) GetAllUsers(ctx context.Context) ([]domain.User, error) {
 	return u.repo.FetchUsers(ctx)
 }
 
-func (u *AdminUsecase) CreateUser(ctx context.Context, user *domain.User) error {
+// CreateUser заводит нового пользователя (сотрудника/админа) и генерирует ему
+// временный пароль. Пароль возвращается открытым текстом ровно один раз —
+// вызывающий код (хендлер) обязан передать его администратору и нигде не сохранять.
+func (u *AdminUsecase) CreateUser(ctx context.Context, user *domain.User) (string, error) {
 	user.CreatedAt = time.Now()
-	// В реальном проекте здесь должен быть bcrypt-хеш сгенерированного пароля
-	// Для демонстрации ставим заглушку, так как поле NOT NULL
-	user.PasswordHash = "$2a$10$FakeHashForDefaultPassword1234567890"
+
+	tempPassword, err := generateTempPassword()
+	if err != nil {
+		return "", err
+	}
+
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(tempPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return "", err
+	}
+	user.PasswordHash = string(hashedPassword)
 
 	if user.Status == "" {
 		user.Status = "Активен"
 	}
-	return u.repo.Create(ctx, user)
+
+	if err := u.repo.Create(ctx, user); err != nil {
+		return "", err
+	}
+	return tempPassword, nil
 }
 
 func (u *AdminUsecase) UpdateUser(ctx context.Context, user *domain.User) error {
