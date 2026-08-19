@@ -62,6 +62,10 @@ func (u *authUsecase) Login(ctx context.Context, email, password string) (string
 		return "", "", nil, errors.New("неверный email или пароль")
 	}
 
+	if user.Status == domain.StatusBlocked {
+		return "", "", nil, errors.New("учетная запись заблокирована")
+	}
+
 	// Генерируем токены
 	accessToken, err := u.generateToken(user.ID, string(user.Role), u.cfg.JWT.AccessTTL)
 	if err != nil {

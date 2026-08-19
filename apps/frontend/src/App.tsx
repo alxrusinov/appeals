@@ -4,6 +4,7 @@ import { MainLayout } from "./components/MainLayout";
 
 // 1. Импорт страниц строго по утвержденной архитектуре
 import { LoginPage } from "./pages/LoginPage";
+import { RegisterPage } from "./pages/RegisterPage";
 import { CitizenPage } from "./pages/CitizenPage";
 import { EmployeePage } from "./pages/EmployeePage";
 import { AdminPage } from "./pages/AdminPage";
@@ -34,6 +35,7 @@ function App() {
     <Routes>
       {/* Публичные маршруты (БЕЗ глобальной шапки и меню) */}
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
       <Route path="/unauthorized" element={<UnauthorizedPage />} />
 
       {/* 🎯 ВСЕ ЗАЩИЩЕННЫЕ МАРШРУТЫ ВНУТРИ ГЛОБАЛЬНОГО МАКЕТА */}

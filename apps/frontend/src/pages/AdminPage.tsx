@@ -13,6 +13,8 @@ import { api } from "../services/api";
 import { downloadCsv, todayForFilename } from "../utils/csv";
 import { SecondaryButton, PrimaryButton } from "../components/buttons";
 import { StatCard } from "../components/StatCard";
+import { getAppealStatusDisplay } from "../utils/appealStatus";
+import { formatDate } from "../utils/date";
 
 export const AdminPage = () => {
   const queryClient = useQueryClient();
@@ -23,6 +25,7 @@ export const AdminPage = () => {
     email?: string;
   }>({});
   const [isDownloading, setIsDownloading] = useState(false);
+  const [newDeptName, setNewDeptName] = useState("");
 
   const { data: rawStats = [] } = useQuery({
     queryKey: ["adminStats"],
@@ -46,6 +49,32 @@ export const AdminPage = () => {
     );
   }, [rawUsers]);
 
+  // Все обращения без ограничения по исполнителю (доступно только администратору) —
+  // используется для назначения исполнителей.
+  const { data: appeals = [], isLoading: appealsLoading } = useQuery({
+    queryKey: ["adminAppeals"],
+    queryFn: async () => {
+      const { data } = await api.get("/appeals", { params: { limit: 200 } });
+      return data;
+    },
+  });
+
+  const { data: employees = [] } = useQuery({
+    queryKey: ["employeesDictionary"],
+    queryFn: async () => {
+      const { data } = await api.get("/users/employees");
+      return data;
+    },
+  });
+
+  const { data: departments = [], isLoading: departmentsLoading } = useQuery({
+    queryKey: ["departments"],
+    queryFn: async () => {
+      const { data } = await api.get("/departments");
+      return data;
+    },
+  });
+
   const updateUserMutation = useMutation({
     mutationFn: async (user: any) => {
       if (user.id) {
@@ -56,10 +85,67 @@ export const AdminPage = () => {
         return data;
       }
     },
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["adminUsers"] });
       queryClient.invalidateQueries({ queryKey: ["adminStats"] });
       closeDialog();
+
+      // При создании (не при редактировании) бэкенд один раз возвращает
+      // сгенерированный временный пароль — его нужно показать администратору сразу,
+      // повторно система его не отдаст.
+      if (!variables.id && data?.temp_password) {
+        alert(
+          `Сотрудник создан.\nВременный пароль: ${data.temp_password}\n\nПередайте его сотруднику лично — повторно система пароль не покажет.`,
+        );
+      }
+    },
+  });
+
+  const deleteUserMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await api.delete(`/admin/users/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["adminUsers"] });
+      queryClient.invalidateQueries({ queryKey: ["adminStats"] });
+    },
+  });
+
+  const assignAppealMutation = useMutation({
+    mutationFn: async ({ appeal, assigneeId }: { appeal: any; assigneeId: number }) => {
+      // Бэкенд ожидает status при каждом PATCH — пересылаем текущий, меняем только исполнителя
+      const { data } = await api.patch(`/appeals/${appeal.id}`, {
+        status: appeal.status,
+        assignee_id: assigneeId,
+        resolution: appeal.resolution ?? "",
+      });
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["adminAppeals"] });
+    },
+  });
+
+  const createDeptMutation = useMutation({
+    mutationFn: async (name: string) => {
+      const { data } = await api.post("/admin/departments", { name });
+      return data;
+    },
+    onSuccess: () => {
+      setNewDeptName("");
+      queryClient.invalidateQueries({ queryKey: ["departments"] });
+    },
+    onError: (err: any) => {
+      alert(err.response?.data?.error || "Не удалось добавить ведомство");
+    },
+  });
+
+  const deleteDeptMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await api.delete(`/admin/departments/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["departments"] });
     },
   });
 
@@ -89,6 +175,28 @@ export const AdminPage = () => {
   const handleSaveUser = () => {
     if (validateForm()) {
       updateUserMutation.mutate(selectedUser);
+    }
+  };
+
+  const handleDeleteUser = (user: any) => {
+    if (
+      window.confirm(
+        `Деактивировать пользователя «${user.name}»? Он больше не сможет войти в систему. История его обращений сохранится.`,
+      )
+    ) {
+      deleteUserMutation.mutate(user.id);
+    }
+  };
+
+  const handleAddDepartment = () => {
+    const name = newDeptName.trim();
+    if (!name) return;
+    createDeptMutation.mutate(name);
+  };
+
+  const handleDeleteDepartment = (dept: any) => {
+    if (window.confirm(`Удалить ведомство «${dept.name}» из справочника?`)) {
+      deleteDeptMutation.mutate(dept.id);
     }
   };
 
@@ -174,6 +282,7 @@ export const AdminPage = () => {
   };
 
   const actionsBodyTemplate = (rowData: any) => {
+    const isBlocked = rowData.status === "Заблокирован";
     return (
       <div className="flex gap-2 justify-end">
         <Button
@@ -191,9 +300,47 @@ export const AdminPage = () => {
             },
           }}
         />
+        <Button
+          icon="pi pi-user-minus"
+          disabled={isBlocked}
+          onClick={() => handleDeleteUser(rowData)}
+          pt={{
+            root: {
+              className: `
+                p-button-text p-button-sm text-red-600 hover:bg-red-50
+                rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed
+            `,
+            },
+          }}
+        />
       </div>
     );
   };
+
+  const appealStatusBodyTemplate = (rowData: any) => {
+    const { label, colorClass } = getAppealStatusDisplay(rowData.status, rowData.assignee_id);
+    return (
+      <span
+        className={`inline-flex items-center px-3 py-1 text-xs font-semibold rounded-lg border tracking-wide shadow-3xs ${colorClass}`}
+      >
+        {label}
+      </span>
+    );
+  };
+
+  const assigneeBodyTemplate = (rowData: any) => (
+    <Dropdown
+      value={rowData.assignee_id ?? null}
+      options={employees.map((e: any) => ({ label: e.full_name, value: e.id }))}
+      placeholder="Не назначен"
+      showClear
+      onChange={e =>
+        e.value && assignAppealMutation.mutate({ appeal: rowData, assigneeId: e.value })
+      }
+      className="w-full border border-gray-300 rounded-lg"
+      pt={{ root: { className: "text-sm" }, input: { className: "p-2 text-sm" } }}
+    />
+  );
 
   return (
     <div className="p-6 max-w-7xl mx-auto w-full flex-grow flex flex-col gap-6 bg-gray-50/50">
@@ -284,33 +431,106 @@ export const AdminPage = () => {
             </div>
           </TabPanel>
 
-          <TabPanel
-            header="Управление очередями"
-            leftIcon="pi pi-sliders-h mr-2.5"
-          >
-            <div className="py-8 text-center max-w-md mx-auto flex flex-col items-center gap-3">
-              <div className="w-16 h-16 bg-purple-50 rounded-full flex items-center justify-center text-purple-500 mb-2">
-                <i className="pi pi-sliders-h text-2xl" />
+          <TabPanel header="Обращения" leftIcon="pi pi-inbox mr-2.5">
+            <div className="flex flex-col gap-4 mt-4">
+              <div className="flex justify-between items-center">
+                <h2 className="text-lg font-semibold text-gray-800">
+                  Назначение исполнителей
+                </h2>
+                <p className="text-sm text-gray-500">
+                  Только администратор может назначать и переназначать исполнителя
+                </p>
               </div>
-              <h3 className="text-lg font-semibold text-gray-900">
-                Маршрутизация заявок
-              </h3>
-              <p className="text-sm text-gray-500">
-                Здесь настраиваются автоматические правила распределения
-                входящих обращений по категориям и отделам.
+
+              <DataTable
+                value={appeals}
+                loading={appealsLoading}
+                dataKey="id"
+                rows={10}
+                paginator
+                className="p-datatable-sm"
+                responsiveLayout="scroll"
+                emptyMessage="Обращения не найдены"
+              >
+                <Column field="id" header="№" className="w-16 text-gray-400" />
+                <Column
+                  field="title"
+                  header="Тема"
+                  className="font-medium text-gray-900 max-w-xs truncate"
+                />
+                <Column field="author_name" header="Гражданин" />
+                <Column
+                  field="created_at"
+                  header="Дата подачи"
+                  className="text-gray-500 w-40"
+                  body={(row: any) => formatDate(row.created_at)}
+                />
+                <Column
+                  field="status"
+                  header="Статус"
+                  body={appealStatusBodyTemplate}
+                  className="w-36"
+                />
+                <Column
+                  header="Исполнитель"
+                  body={assigneeBodyTemplate}
+                  className="w-56"
+                />
+              </DataTable>
+            </div>
+          </TabPanel>
+
+          <TabPanel header="Ведомства" leftIcon="pi pi-sliders-h mr-2.5">
+            <div className="flex flex-col gap-4 mt-4 max-w-xl">
+              <h2 className="text-lg font-semibold text-gray-800">
+                Справочник ведомств
+              </h2>
+              <p className="text-sm text-gray-500 -mt-2">
+                Ведомства используются при маршрутизации обращений между отделами.
               </p>
-              <Button
-                label="Настроить правила"
-                pt={{
-                  root: {
-                    className: `
-                        mt-2 px-4 py-2 rounded-xl font-medium
-                        bg-purple-500 hover:bg-purple-600 border-purple-500 text-white
-                        transition-colors
-                    `,
-                  },
-                }}
-              />
+
+              <div className="flex gap-2">
+                <InputText
+                  value={newDeptName}
+                  onChange={e => setNewDeptName(e.target.value)}
+                  placeholder="Название нового ведомства"
+                  className="flex-grow p-3 border rounded-xl text-sm box-border border-gray-300"
+                />
+                <PrimaryButton
+                  label="Добавить"
+                  icon="pi pi-plus"
+                  loading={createDeptMutation.isPending}
+                  onClick={handleAddDepartment}
+                />
+              </div>
+
+              <DataTable
+                value={departments}
+                loading={departmentsLoading}
+                dataKey="id"
+                className="p-datatable-sm"
+                emptyMessage="Ведомства не найдены"
+              >
+                <Column field="id" header="ID" className="w-16 text-gray-400" />
+                <Column field="name" header="Название" className="font-medium text-gray-900" />
+                <Column
+                  body={(row: any) => (
+                    <div className="flex justify-end">
+                      <Button
+                        icon="pi pi-trash"
+                        onClick={() => handleDeleteDepartment(row)}
+                        pt={{
+                          root: {
+                            className:
+                              "p-button-text p-button-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors",
+                          },
+                        }}
+                      />
+                    </div>
+                  )}
+                  className="w-20"
+                />
+              </DataTable>
             </div>
           </TabPanel>
         </TabView>

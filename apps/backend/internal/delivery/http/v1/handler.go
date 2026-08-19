@@ -64,9 +64,15 @@ func (h *Handler) InitRoutes(api iris.Party) {
 		admin.Get("/users", h.getUsers)
 		admin.Post("/users", h.createUser)
 		admin.Put("/users/{id:int}", h.updateUser)
+		admin.Delete("/users/{id:int}", h.deleteUser)
 
 		// Статистика (которую вы вызывали в коде как /admin/stats)
 		admin.Get("/stats", h.getStatsSummary)
+
+		// Ведомства/отделы — справочник читают все авторизованные (dictionary.go),
+		// а добавлять/удалять записи может только администратор
+		admin.Post("/departments", h.createDepartment)
+		admin.Delete("/departments/{id:int}", h.deleteDepartment)
 	}
 
 	// Эндпоинты ГРАЖДАН (Личный кабинет)
@@ -77,12 +83,16 @@ func (h *Handler) InitRoutes(api iris.Party) {
 		citizenAppeals.Post("/", h.createCitizenAppeal)
 	}
 
-	// Эндпоинты СОТРbackgroundУДНИКОВ (Панель мониторинга)
+	// Эндпоинты СОТРУДНИКОВ (Панель мониторинга).
+	// Сотрудник видит и правит только обращения, назначенные ему администратором
+	// (проверяется внутри getEmployeeAppeals/updateAppealStatus); полный доступ
+	// и право назначать/переназначать исполнителя — только у администратора.
 	employeeAppeals := protected.Party("/appeals")
 	employeeAppeals.Use(middleware.RoleMiddleware(domain.RoleEmployee, domain.RoleAdmin))
 	{
 		employeeAppeals.Get("/", h.getEmployeeAppeals)
-		employeeAppeals.Post("/", h.createEmployeeAppeal)
+		// Ручное создание обращения с назначением исполнителя — только администратор
+		employeeAppeals.Post("/", middleware.RoleMiddleware(domain.RoleAdmin), h.createEmployeeAppeal)
 		employeeAppeals.Patch("/{id:int}", h.updateAppealStatus)
 	}
 

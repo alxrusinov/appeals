@@ -11,9 +11,8 @@ export const UnauthorizedPage = () => {
   };
 
   const handleSwitchAccount = () => {
-    // Физически очищаем токены и роли для предотвращения циклического редиректа
+    // Физически очищаем токен для предотвращения циклического редиректа
     localStorage.removeItem("token");
-    sessionStorage.removeItem("user_role");
 
     // Перенаправляем на страницу логина
     window.location.href = "/login";

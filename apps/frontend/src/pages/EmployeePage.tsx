@@ -7,7 +7,6 @@ import { Column } from "primereact/column";
 import { Button } from "primereact/button";
 import { Dialog } from "primereact/dialog";
 import { Dropdown } from "primereact/dropdown";
-import { InputText } from "primereact/inputtext";
 import { InputTextarea } from "primereact/inputtextarea";
 
 import { api } from "../services/api";
@@ -23,12 +22,8 @@ export const EmployeePage = () => {
   const [selectedTicket, setSelectedTicket] = useState<any>(null);
   const [isDownloading, setIsDownloading] = useState(false);
 
-  // Ошибки валидации (для темы, описания и решения)
-  const [formErrors, setFormErrors] = useState<{
-    title?: string;
-    description?: string;
-    resolution?: string;
-  }>({});
+  // Ошибка валидации при закрытии обращения
+  const [formErrors, setFormErrors] = useState<{ resolution?: string }>({});
 
   // Получение списка задач
   const { data: tickets = [], isLoading: ticketsLoading } = useQuery({
@@ -47,16 +42,15 @@ export const EmployeePage = () => {
     },
   });
 
-  // Мутация: ветвление на POST (создание) и PUT (редактирование)
+  // Сотрудник может только обновлять статус/резолюцию уже назначенного ему обращения —
+  // создавать обращения и назначать исполнителя может только администратор (см. AdminPage)
   const saveTicketMutation = useMutation({
     mutationFn: async (ticket: any) => {
-      if (ticket.id) {
-        const { data } = await api.patch(`/appeals/${ticket.id}`, ticket);
-        return data;
-      } else {
-        const { data } = await api.post("/appeals", ticket);
-        return data;
-      }
+      const { data } = await api.patch(`/appeals/${ticket.id}`, {
+        status: ticket.status,
+        resolution: ticket.resolution,
+      });
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["employeeTickets"] });
@@ -71,26 +65,15 @@ export const EmployeePage = () => {
     setFormErrors({});
   };
 
-  // Проверка обязательных полей на фронтенде перед отправкой в MSW
+  // Проверка перед закрытием обращения: резолюция обязательна при переводе в "Решено"
   const validateForm = () => {
     const errors: typeof formErrors = {};
 
-    if (!selectedTicket?.id) {
-      // Валидация создания новой задачи
-      if (!selectedTicket?.title?.trim()) {
-        errors.title = "Тема обращения обязательна для заполнения";
-      }
-      if (!selectedTicket?.description?.trim()) {
-        errors.description = "Описание проблемы обязательно для заполнения";
-      }
-    } else {
-      // Валидация закрытия существующей задачи
-      if (
-        selectedTicket.status === "done" &&
-        !selectedTicket.resolution?.trim()
-      ) {
-        errors.resolution = "Необходимо указать решение для закрытия обращения";
-      }
+    if (
+      selectedTicket?.status === "done" &&
+      !selectedTicket?.resolution?.trim()
+    ) {
+      errors.resolution = "Необходимо указать решение для закрытия обращения";
     }
 
     setFormErrors(errors);
@@ -160,7 +143,7 @@ export const EmployeePage = () => {
   const statusBodyTemplate = (rowData: any) => {
     const { label, colorClass } = getAppealStatusDisplay(
       rowData.status,
-      rowData.assigneeId,
+      rowData.assignee_id,
     );
 
     return (
@@ -228,21 +211,9 @@ export const EmployeePage = () => {
                 <h2 className="text-lg font-semibold text-gray-800">
                   Обращения в работе
                 </h2>
-                <PrimaryButton
-                  label="Создать обращение"
-                  icon="pi pi-plus-circle mr-2"
-                  onClick={() => {
-                    setSelectedTicket({
-                      title: "",
-                      category: "Техническая поддержка",
-                      priority: "Средний",
-                      description: "",
-                      resolution: "",
-                    });
-                    setTicketDialog(true);
-                  }}
-                  disabled
-                />
+                <p className="text-sm text-gray-500">
+                  Показаны только обращения, назначенные вам администратором
+                </p>
               </div>
 
               <DataTable
@@ -279,14 +250,10 @@ export const EmployeePage = () => {
         </TabView>
       </div>
 
-      {/* Единое модальное окно (Создание / Просмотр-Редактирование) */}
+      {/* Модальное окно просмотра и закрытия назначенного обращения */}
       <Dialog
         visible={ticketDialog}
-        header={
-          selectedTicket?.id
-            ? `Обращение №${selectedTicket.id}`
-            : "Новое внутреннее обращение"
-        }
+        header={`Обращение №${selectedTicket?.id ?? ""}`}
         modal
         onHide={closeDialog}
         className="w-full max-w-lg mx-4 bg-white rounded-2xl shadow-xl overflow-hidden"
@@ -303,7 +270,7 @@ export const EmployeePage = () => {
           <>
             <SecondaryButton label="Отмена" type="button" onClick={closeDialog} />
             <PrimaryButton
-              label={selectedTicket?.id ? "Сохранить" : "Создать"}
+              label="Сохранить"
               loading={saveTicketMutation.isPending}
               onClick={handleSaveTicket}
             />
@@ -313,72 +280,6 @@ export const EmployeePage = () => {
         <div className="flex flex-col gap-5 max-h-[70vh] overflow-y-auto px-6 py-4 box-border">
           {selectedTicket && (
             <div className="flex flex-col gap-5 max-h-[70vh] overflow-y-auto px-6 py-4 box-border min-w-0">
-              {/* РЕЖИМ А: Форма отправки новой задачи */}
-              {!selectedTicket.id ? (
-                <>
-                  <div className="flex flex-col gap-1.5 w-full">
-                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                      Тема инцидента
-                      <span className="text-red-500 font-bold">*</span>
-                    </label>
-                    <InputText
-                      value={selectedTicket.title}
-                      placeholder="Краткое описание сути проблемы"
-                      onChange={e => {
-                        setSelectedTicket({
-                          ...selectedTicket,
-                          title: e.target.value,
-                        });
-                        if (formErrors.title)
-                          setFormErrors({ ...formErrors, title: undefined });
-                      }}
-                      className={`w-full p-3 border rounded-xl text-sm box-border ${
-                        formErrors.title ? "border-red-500" : "border-gray-300"
-                      }`}
-                    />
-                    {formErrors.title && (
-                      <span className="text-xs text-red-500 font-medium ml-1">
-                        {formErrors.title}
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="flex flex-col gap-1.5">
-                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                      Подробное описание задачи
-                      <span className="text-red-500 font-bold">*</span>
-                    </label>
-                    <InputTextarea
-                      value={selectedTicket.description}
-                      rows={4}
-                      placeholder="Укажите детали, номера кабинетов или шаги для воспроизведения проблемы..."
-                      onChange={e => {
-                        setSelectedTicket({
-                          ...selectedTicket,
-                          description: e.target.value,
-                        });
-                        if (formErrors.description)
-                          setFormErrors({
-                            ...formErrors,
-                            description: undefined,
-                          });
-                      }}
-                      className={`w-full p-3 border rounded-xl bg-gray-50/30 text-gray-900 focus:bg-white transition-all outline-hidden text-sm ${
-                        formErrors.description
-                          ? "border-red-500 focus:border-red-500"
-                          : "border-gray-300 focus:border-purple-500"
-                      }`}
-                    />
-                    {formErrors.description && (
-                      <span className="text-xs text-red-500 font-medium ml-1">
-                        {formErrors.description}
-                      </span>
-                    )}
-                  </div>
-                </>
-              ) : (
-                /* РЕЖИМ Б: Карточка работы с текущей задачей */
-                <>
                   <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 flex flex-col gap-2">
                     <div className="flex justify-between text-xs text-gray-400 font-medium">
                       <span>Автор: {selectedTicket.author_name}</span>
@@ -454,8 +355,6 @@ export const EmployeePage = () => {
                       </span>
                     )}
                   </div>
-                </>
-              )}
             </div>
           )}
         </div>

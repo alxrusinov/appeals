@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"errors"
 	"time"
 
 	"appeals/apps/backend/internal/domain"
@@ -73,6 +74,13 @@ func (h *Handler) getEmployeeAppeals(ctx iris.Context) {
 		Offset:       ctx.URLParamIntDefault("offset", 0),
 	}
 
+	// Сотрудник видит только обращения, назначенные ему администратором — параметр
+	// assignee_id из запроса в этом случае игнорируется и принудительно
+	// заменяется на ID самого сотрудника. Администратор видит все обращения.
+	if getUserRole(ctx) == domain.RoleEmployee {
+		filter.AssigneeID = getUserID(ctx)
+	}
+
 	appeals, err := h.appealUC.GetListForEmployee(ctx.Request().Context(), filter)
 	if err != nil {
 		respondError(ctx, iris.StatusInternalServerError, err.Error())
@@ -112,9 +120,19 @@ func (h *Handler) updateAppealStatus(ctx iris.Context) {
 		return
 	}
 
-	err = h.appealUC.UpdateStatus(ctx.Request().Context(), id, domain.AppealStatus(input.Status), input.AssigneeID, input.Resolution)
+	err = h.appealUC.UpdateStatus(
+		ctx.Request().Context(), id, domain.AppealStatus(input.Status), input.AssigneeID, input.Resolution,
+		getUserID(ctx), getUserRole(ctx),
+	)
 	if err != nil {
-		respondError(ctx, iris.StatusInternalServerError, err.Error())
+		switch {
+		case errors.Is(err, domain.ErrAppealNotFound):
+			respondError(ctx, iris.StatusNotFound, err.Error())
+		case errors.Is(err, domain.ErrForbidden):
+			respondError(ctx, iris.StatusForbidden, err.Error())
+		default:
+			respondError(ctx, iris.StatusInternalServerError, err.Error())
+		}
 		return
 	}
 

@@ -13,6 +13,14 @@ const (
 	RoleAdmin    UserRole = "admin"
 )
 
+// Статусы учетной записи (поле users.status). "Заблокирован" используется как
+// результат мягкого удаления — физически строка не удаляется, но вход запрещен.
+const (
+	StatusActive  = "Активен"
+	StatusOnLeave = "В отпуске"
+	StatusBlocked = "Заблокирован"
+)
+
 type User struct {
 	ID           int       `json:"id" db:"id"`
 	Email        string    `json:"email" db:"email"`
@@ -61,4 +69,7 @@ type AdminUsecase interface {
 	// CreateUser заводит пользователя и возвращает сгенерированный временный пароль
 	CreateUser(ctx context.Context, user *User) (tempPassword string, err error)
 	UpdateUser(ctx context.Context, user *User) error
+	// DeactivateUser — мягкое удаление: переводит пользователя в статус StatusBlocked,
+	// физически строка (и история его обращений) в БД не удаляется.
+	DeactivateUser(ctx context.Context, id int) error
 }

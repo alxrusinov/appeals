@@ -37,7 +37,7 @@ func (r *userRepository) Create(ctx context.Context, user *domain.User) error {
 }
 
 func (r *userRepository) GetByID(ctx context.Context, id int) (*domain.User, error) {
-	query := `SELECT id, full_name, email, password_hash, role, created_at FROM users WHERE id = ?`
+	query := `SELECT id, full_name, email, password_hash, role, status, created_at FROM users WHERE id = ?`
 	var user domain.User
 
 	err := r.db.GetContext(ctx, &user, query, id)
@@ -51,7 +51,7 @@ func (r *userRepository) GetByID(ctx context.Context, id int) (*domain.User, err
 }
 
 func (r *userRepository) GetByEmail(ctx context.Context, email string) (*domain.User, error) {
-	query := `SELECT id, full_name, email, password_hash, role, created_at FROM users WHERE email = ?`
+	query := `SELECT id, full_name, email, password_hash, role, status, created_at FROM users WHERE email = ?`
 	var user domain.User
 
 	err := r.db.GetContext(ctx, &user, query, email)

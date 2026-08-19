@@ -2,7 +2,6 @@ package usecase
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"appeals/apps/backend/internal/domain"
@@ -87,11 +86,22 @@ func (u *appealUsecase) GetListForCitizen(ctx context.Context, citizenID int) ([
 	return appeals, nil
 }
 
-// Изменение статуса, назначение ответственного или закрытие обращения
-func (u *appealUsecase) UpdateStatus(ctx context.Context, id int, status domain.AppealStatus, assigneeID *int, resolution string) error {
+// Изменение статуса, назначение ответственного или закрытие обращения.
+// Назначать/переназначать исполнителя (assigneeID) может только администратор;
+// сотрудник может менять только те обращения, что назначены лично ему.
+func (u *appealUsecase) UpdateStatus(ctx context.Context, id int, status domain.AppealStatus, assigneeID *int, resolution string, actorID int, actorRole domain.UserRole) error {
 	appeal, err := u.appealRepo.GetByID(ctx, id)
 	if err != nil {
-		return errors.New("обращение не найдено")
+		return domain.ErrAppealNotFound
+	}
+
+	if actorRole != domain.RoleAdmin {
+		if assigneeID != nil {
+			return domain.ErrForbidden
+		}
+		if appeal.AssigneeID == nil || *appeal.AssigneeID != actorID {
+			return domain.ErrForbidden
+		}
 	}
 
 	if assigneeID != nil {

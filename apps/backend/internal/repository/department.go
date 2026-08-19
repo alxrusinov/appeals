@@ -26,3 +26,22 @@ func (r *departmentRepository) GetAll(ctx context.Context) ([]domain.Department,
 	}
 	return departments, nil
 }
+
+func (r *departmentRepository) Create(ctx context.Context, name string) (*domain.Department, error) {
+	result, err := r.db.ExecContext(ctx, `INSERT INTO departments (name) VALUES (?)`, name)
+	if err != nil {
+		return nil, err
+	}
+
+	id, err := result.LastInsertId()
+	if err != nil {
+		return nil, err
+	}
+
+	return &domain.Department{ID: int(id), Name: name}, nil
+}
+
+func (r *departmentRepository) Delete(ctx context.Context, id int) error {
+	_, err := r.db.ExecContext(ctx, `DELETE FROM departments WHERE id = ?`, id)
+	return err
+}

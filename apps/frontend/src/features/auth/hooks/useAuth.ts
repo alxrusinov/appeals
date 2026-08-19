@@ -83,12 +83,27 @@ export const useAuth = () => {
         }
     });
 
+    // 2b. Регистрация нового гражданина (самостоятельная, роль всегда 'citizen' — задается бэкендом)
+    const registerMutation = useMutation({
+        mutationFn: async (input: { full_name: string; email: string; password: string }) => {
+            const { data } = await api.post('/auth/register', input);
+            return data;
+        },
+        onSuccess: () => {
+            alert('Регистрация успешна! Теперь вы можете войти под своим email и паролем.');
+            navigate('/login');
+        },
+        onError: (err) => {
+            console.error('Ошибка при регистрации:', err);
+            const serverMessage = (err as any).response?.data?.error;
+            alert('Не удалось зарегистрироваться: ' + (serverMessage || 'неизвестная ошибка'));
+        }
+    });
+
     // 3. Безопасный выход из системы (Логаут)
     const logout = () => {
         // Удаляем токен авторизации
         localStorage.removeItem('token');
-        // Роль, сохраненная для MSW-моков (см. mocks/handlers/auth.mocks.ts)
-        sessionStorage.removeItem('user_role');
 
         // Сбрасываем стейт пользователя
         queryClient.setQueryData(['auth', 'me'], null);
@@ -111,6 +126,9 @@ export const useAuth = () => {
         login: loginMutation.mutate,
         isLoggingIn: loginMutation.isPending,
         loginError: loginMutation.error,
+
+        register: registerMutation.mutate,
+        isRegistering: registerMutation.isPending,
 
         logout
     };

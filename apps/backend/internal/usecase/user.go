@@ -50,7 +50,7 @@ func (u *AdminUsecase) CreateUser(ctx context.Context, user *domain.User) (strin
 	user.PasswordHash = string(hashedPassword)
 
 	if user.Status == "" {
-		user.Status = "Активен"
+		user.Status = domain.StatusActive
 	}
 
 	if err := u.repo.Create(ctx, user); err != nil {
@@ -66,4 +66,15 @@ func (u *AdminUsecase) UpdateUser(ctx context.Context, user *domain.User) error 
 
 func (u *AdminUsecase) GetStatsSummary(ctx context.Context) ([]domain.StatRecord, error) {
 	return u.repo.GetStatsSummary(ctx)
+}
+
+// DeactivateUser — мягкое удаление пользователя: физически строка (и ссылающаяся
+// на нее история обращений) не удаляется, только блокируется вход.
+func (u *AdminUsecase) DeactivateUser(ctx context.Context, id int) error {
+	user, err := u.repo.GetByID(ctx, id)
+	if err != nil {
+		return err
+	}
+	user.Status = domain.StatusBlocked
+	return u.repo.Update(ctx, user)
 }

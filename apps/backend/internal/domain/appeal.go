@@ -2,7 +2,15 @@ package domain
 
 import (
 	"context"
+	"errors"
 	"time"
+)
+
+var (
+	ErrAppealNotFound = errors.New("обращение не найдено")
+	// ErrForbidden — сотрудник пытается назначить/переназначить исполнителя
+	// (это право только у администратора) либо изменить не назначенное ему обращение.
+	ErrForbidden = errors.New("недостаточно прав для этого действия")
 )
 
 type AppealStatus string
@@ -78,5 +86,8 @@ type AppealUsecase interface {
 	CreateByEmployee(ctx context.Context, title, description string, citizenID, assigneeID int, deadlineAt time.Time) (*Appeal, error)
 	GetListForEmployee(ctx context.Context, filter AppealFilter) ([]Appeal, error)
 	GetListForCitizen(ctx context.Context, citizenID int) ([]Appeal, error)
-	UpdateStatus(ctx context.Context, id int, status AppealStatus, assigneeID *int, resolution string) error
+	// UpdateStatus меняет статус/резолюцию (и, если actorRole == RoleAdmin, исполнителя).
+	// actorID/actorRole — тот, кто выполняет запрос: сотруднику разрешено менять только
+	// обращения, назначенные лично ему, и он не может задавать assigneeID (см. ErrForbidden).
+	UpdateStatus(ctx context.Context, id int, status AppealStatus, assigneeID *int, resolution string, actorID int, actorRole UserRole) error
 }

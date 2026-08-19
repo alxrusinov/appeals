@@ -57,3 +57,20 @@ func (h *Handler) updateUser(ctx iris.Context) {
 	ctx.StatusCode(iris.StatusOK)
 	ctx.JSON(user)
 }
+
+// deleteUser обрабатывает DELETE /api/v1/admin/users/{id} — мягкое удаление
+// (перевод в статус "Заблокирован"), история и авторство обращений сохраняются.
+func (h *Handler) deleteUser(ctx iris.Context) {
+	id, err := ctx.Params().GetInt("id")
+	if err != nil {
+		respondError(ctx, iris.StatusBadRequest, "невалидный ID пользователя")
+		return
+	}
+
+	if err := h.adminUC.DeactivateUser(ctx.Request().Context(), id); err != nil {
+		respondError(ctx, iris.StatusInternalServerError, "не удалось деактивировать пользователя")
+		return
+	}
+
+	ctx.JSON(iris.Map{"message": "пользователь деактивирован"})
+}
